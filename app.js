@@ -162,7 +162,7 @@ function loadFromLocalStorage() {
                 x: 0.35, y: 0.38,
                 size: 8,
                 images: [
-                    { base64: 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?auto=format&fit=crop&w=400&q=80', timeString: '14:23' }
+                    { base64: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=400&q=80', timeString: '14:23' }
                 ]
             },
             {
@@ -495,7 +495,9 @@ function setupAudioAnalyser(stream) {
 // 2. Speech-to-Text AI (Using HTML5 Web Speech Recognition)
 function setupSpeechRecognition() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
+    const isFileProtocol = window.location.protocol === 'file:';
+    
+    if (SpeechRecognition && !isFileProtocol) {
         const recognition = new SpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = true; // Enable real-time interim results!
@@ -524,6 +526,12 @@ function setupSpeechRecognition() {
             console.error("Speech Recognition Error: ", e);
             if (e.error === 'not-allowed') {
                 showCustomAlert("Quyền truy cập Micro bị chặn", "Vui lòng cho phép quyền truy cập Microphone của trình duyệt để sử dụng tính năng AI dịch chữ!", "🎙️");
+            } else if (e.error === 'audio-capture') {
+                showCustomAlert("Microphone Bận", "Không thể ghi nhận âm thanh từ micro. Micro của bạn có thể đang được sử dụng bởi một ứng dụng khác (như Zoom, Zalo). Vui lòng tắt các ứng dụng đó và thử lại!", "🎙️");
+            } else if (e.error === 'network') {
+                showCustomAlert("Lỗi Kết Nối Mạng", "Tính năng AI dịch giọng nói yêu cầu kết nối Internet ổn định. Vui lòng kiểm tra lại mạng của bạn!", "🌐");
+            } else if (e.error === 'no-speech') {
+                console.warn("Không phát hiện giọng nói.");
             }
         };
         
@@ -540,8 +548,25 @@ function setupSpeechRecognition() {
         
         appState.speechRecognition = recognition;
     } else {
-        console.warn("Trình duyệt này không hỗ trợ Web Speech-to-Text API.");
-        document.getElementById('speech-to-text-toggle').style.display = 'none';
+        console.warn("Trình duyệt này không hỗ trợ Web Speech-to-Text API hoặc đang mở dưới dạng giao thức file://.");
+        const toggleBtn = document.getElementById('speech-to-text-toggle');
+        if (toggleBtn) {
+            toggleBtn.onclick = () => {
+                if (isFileProtocol) {
+                    showCustomAlert(
+                        "Lỗi Giao thức Tệp Cục bộ (file://)",
+                        "Bạn đang mở trang web trực tiếp từ ổ đĩa máy tính (nhấp đúp tệp <strong>index.html</strong>). Trình duyệt Google Chrome/Edge chặn micro và các tính năng AI âm thanh vì lý do bảo mật đối với giao thức tệp cục bộ.<br><br><strong>Cách chạy để tính năng AI hoạt động:</strong><br>1. Truy cập trực tiếp link web chính thức đã đưa lên mạng: <strong>https://baovan1809.github.io/loichuc50nam/</strong> (hoạt động 100% cực kỳ mượt mà!).<br>2. Hoặc sử dụng máy chủ ảo cục bộ (Local Server) như VS Code Live Server hoặc chạy file <strong>server.js</strong> đi kèm!",
+                        "🎙️"
+                    );
+                } else {
+                    showCustomAlert(
+                        "Trình duyệt không hỗ trợ AI",
+                        "Trình duyệt hiện tại của bạn (Zalo/Messenger Webview hoặc Firefox) không hỗ trợ tính năng Web Speech AI. <br><br><strong>Cách khắc phục:</strong> Vui lòng sao chép đường link và mở bằng trình duyệt <strong>Google Chrome</strong> hoặc <strong>Microsoft Edge</strong> (trên máy tính) hoặc <strong>Safari</strong> (trên iPhone) để sử dụng tính năng AI dịch giọng nói thành chữ nhé!",
+                        "🎙️"
+                    );
+                }
+            };
+        }
     }
 }
 
@@ -821,9 +846,10 @@ function handleSaveMemory() {
         date: cleanDateStr,
         time: cleanTimeStr,
         text: draft.text || "Ký ức hình ảnh tinh khôi.",
-        photoUrl: draft.photoUrl || "https://images.unsplash.com/photo-1542038784456-1ea8e935640e?auto=format&fit=crop&w=600&q=80",
+        photoUrl: draft.photoUrl || "https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=800&q=80",
         audioUrl: draft.audioUrl,
         audioDuration: draft.audioDuration || "00:00",
+        videoUrl: draft.videoUrl || "",
         size: mockSizeKB < 1024 ? `${mockSizeKB} KB` : `${(mockSizeKB / 1024).toFixed(1)} MB`
     };
     
@@ -914,7 +940,7 @@ function saveToWebCapsule() {
     );
 }
 
-function syncWithGoogleDrive() {
+async function syncWithGoogleDrive() {
     if (!appState.currentUser || !appState.currentUser.email) {
         showCustomAlert("Lỗi Đồng Bộ", "Không tìm thấy địa chỉ Gmail liên kết. Vui lòng đăng nhập lại!", "❌");
         return;
@@ -929,21 +955,70 @@ function syncWithGoogleDrive() {
     
     const lastMemory = memories[memories.length - 1];
     
-    // 1. Download written letter as a beautifully formatted text file
-    const textContent = `LỜI CHÚC 50 NĂM\n====================\nNgày lưu: ${lastMemory.date} lúc ${lastMemory.time}\nGia đình: ${appState.currentUser.familyName}\nGmail liên kết: ${appState.currentUser.email}\nLoại ký ức: ${lastMemory.photoUrl.startsWith('data:image') ? 'Ảnh chụp & Lời chúc' : 'Lời nhắn văn bản'}\nDung lượng: ${lastMemory.size}\n\nLời chúc chân thành gửi tương lai:\n"${lastMemory.text}"\n====================`;
+    // 1. Compile offscreen thiệp card and export as a gorgeous high-fidelity PDF!
+    const printableNode = document.getElementById('printable-thiep-container');
+    if (printableNode) {
+        printableNode.innerHTML = '';
+        const card = document.createElement('div');
+        card.className = 'thiep-card';
+        
+        card.innerHTML = `
+            <div class="thiep-header">
+                <div class="thiep-title">Lời Chúc 50 Năm</div>
+                <div class="thiep-tagline">"Ký ức gia tộc là di sản ngàn đời"</div>
+            </div>
+            <div class="thiep-body">
+                <div class="thiep-image-box">
+                    <img src="${lastMemory.photoUrl}" alt="Family print frame" class="thiep-img">
+                </div>
+                <div class="thiep-message-box">
+                    <div class="thiep-message-text">"${lastMemory.text}"</div>
+                </div>
+            </div>
+            <div class="thiep-bottom-row">
+                <div class="thiep-meta-info">
+                    <strong>Gia đình:</strong> ${appState.currentUser ? appState.currentUser.familyName : "Dòng họ Nguyễn An"}<br>
+                    <strong>Ngày gieo mầm:</strong> ${lastMemory.date} lúc ${lastMemory.time}<br>
+                    <strong>Bảo lưu truyền đời bởi:</strong> Lời Chúc 50 Năm Capsule
+                </div>
+                <div class="thiep-qr-box" id="thiep-qr-gdrive-node"></div>
+            </div>
+        `;
+        
+        printableNode.appendChild(card);
+        
+        // Generate QR code specifically inside the card offline-first
+        let uniqueLink = window.location.href.split('?')[0];
+        uniqueLink += `?memoryId=${lastMemory.id}`;
+        uniqueLink += `&text=${encodeURIComponent(lastMemory.text)}`;
+        uniqueLink += `&date=${lastMemory.date}`;
+        uniqueLink += `&time=${lastMemory.time}`;
+        if (appState.currentUser) {
+            uniqueLink += `&family=${encodeURIComponent(appState.currentUser.familyName)}`;
+        }
+        if (lastMemory.photoUrl && !lastMemory.photoUrl.startsWith('data:image')) {
+            uniqueLink += `&photo=${encodeURIComponent(lastMemory.photoUrl)}`;
+        }
+
+        const qrBox = document.getElementById('thiep-qr-gdrive-node');
+        if (qrBox) {
+            await generateQRCode(qrBox, uniqueLink, 80);
+        }
+        
+        await waitForImagesToLoad(printableNode);
+        
+        // Convert to PDF and download
+        const opt = {
+            margin:       10,
+            filename:     `loichuc50nam_thiep_${lastMemory.id}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        html2pdf().set(opt).from(card).save();
+    }
     
-    const textBlob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
-    const textUrl = URL.createObjectURL(textBlob);
-    
-    const textLink = document.createElement('a');
-    textLink.href = textUrl;
-    textLink.download = `loichuc50nam_${lastMemory.id}.txt`;
-    document.body.appendChild(textLink);
-    textLink.click();
-    document.body.removeChild(textLink);
-    URL.revokeObjectURL(textUrl);
-    
-    // 2. Download camera snapshot as a PNG file if it exists and is base64 encoded
+    // 2. Download camera snapshot as a raw PNG file if it exists and is base64
     if (lastMemory.photoUrl && lastMemory.photoUrl.startsWith('data:image')) {
         const imgLink = document.createElement('a');
         imgLink.href = lastMemory.photoUrl;
@@ -953,14 +1028,43 @@ function syncWithGoogleDrive() {
         document.body.removeChild(imgLink);
     }
     
+    // 3. Download raw recorded audio (.mp3) if it exists
+    if (lastMemory.audioUrl) {
+        const audioLink = document.createElement('a');
+        audioLink.href = lastMemory.audioUrl;
+        audioLink.download = `giong_noi_ki_uc_${lastMemory.id}.mp3`;
+        document.body.appendChild(audioLink);
+        audioLink.click();
+        document.body.removeChild(audioLink);
+    }
+
+    // 4. Download raw recorded video (.mp4) if it exists
+    const videoUrl = lastMemory.videoUrl || appState.currentMemoryDraft.videoUrl;
+    if (videoUrl) {
+        const videoLink = document.createElement('a');
+        videoLink.href = videoUrl;
+        videoLink.download = `video_ki_uc_${lastMemory.id}.mp4`;
+        document.body.appendChild(videoLink);
+        videoLink.click();
+        document.body.removeChild(videoLink);
+    }
+    
+    // Construct dynamic file types label
+    let fileTypes = [];
+    if (lastMemory.photoUrl || lastMemory.text) fileTypes.push("Thiệp PDF nghệ thuật");
+    if (lastMemory.photoUrl && lastMemory.photoUrl.startsWith('data:image')) fileTypes.push("Ảnh gốc PNG");
+    if (lastMemory.audioUrl) fileTypes.push("Ghi âm giọng nói MP3");
+    if (videoUrl) fileTypes.push("Video quay hình MP4");
+    const fileTypesLabel = fileTypes.join(", ");
+    
     const gdriveMessage = `
     <div style="text-align: left; margin-top: 10px;">
         <p style="font-size: 0.95rem; margin-bottom: 12px; color: var(--color-text-brown);">
-            Do chính sách bảo mật nghiêm ngặt của Google, website không thể tự động đăng nhập và ghi tệp âm thầm vào Drive của bạn. Để bảo tồn vĩnh viễn, hệ thống đã tự động xuất và tải xuống <strong>2 tệp tin ký ức</strong> (.txt và .png) về thiết bị của bạn.
+            Do chính sách bảo mật nghiêm ngặt của Google, website không thể tự động đăng nhập và ghi tệp âm thầm vào Drive của bạn. Để bảo tồn vĩnh viễn, hệ thống đã tự động xuất và tải xuống các tệp tin ký ức chất lượng cao (**${fileTypesLabel}**) về thiết bị của bạn.
         </p>
         <div class="step-item" style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; font-size: 0.9rem;">
             <div style="background: var(--color-gold); color: #fff; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; line-height: 20px;">1</div>
-            <div>Kiểm tra thư mục tải xuống trên thiết bị để tìm tệp ký ức vừa xuất về.</div>
+            <div>Kiểm tra thư mục tải xuống trên thiết bị để tìm các tệp tin vừa tải về.</div>
         </div>
         <div class="step-item" style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; font-size: 0.9rem;">
             <div style="background: var(--color-gold); color: #fff; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; line-height: 20px;">2</div>
@@ -1117,7 +1221,7 @@ async function triggerCardPrinting(memoryId = null) {
             date: '22/05/2026',
             time: '20:30',
             text: 'Chúc gia đình ta luôn hòa thuận, yêu thương nhau suốt đời. Chúc con cháu 50 năm sau luôn nhớ về cội nguồn dòng họ Nguyễn An.',
-            photoUrl: 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?auto=format&fit=crop&w=600&q=80',
+            photoUrl: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=800&q=80',
             size: '224 KB'
         };
     }
@@ -1226,10 +1330,13 @@ function renderArchiveGrid() {
             if (memory.audioUrl) {
                 typeLabel += ' & Giọng nói';
             }
+            if (memory.videoUrl) {
+                typeLabel += ' & Video';
+            }
             
             card.innerHTML = `
                 <div class="archive-card-image">
-                    <img src="${memory.photoUrl || 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?auto=format&fit=crop&w=600&q=80'}" alt="Keepsake image">
+                    <img src="${memory.photoUrl || 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=800&q=80'}" alt="Keepsake image">
                     <div class="archive-card-badge">${typeLabel}</div>
                 </div>
                 <div class="archive-card-content">
@@ -1249,13 +1356,23 @@ function renderArchiveGrid() {
                             </button>
                         </div>
                     ` : ''}
+
+                    ${memory.videoUrl ? `
+                        <div class="archive-card-video" style="margin-top: 10px;">
+                            <video src="${memory.videoUrl}" controls style="width: 100%; border-radius: 6px; border: 1px solid var(--color-gold); max-height: 200px;"></video>
+                        </div>
+                    ` : ''}
                 </div>
-                <div class="archive-card-actions">
-                    <button class="btn-primary btn-small tooltip" data-tooltip="In thiệp độc bản chứa ảnh & mã QR" onclick="printSpecificMemory('${memory.id}')">
-                        🖨️ In thiệp
+                </div>
+                <div class="archive-card-actions" style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <button class="btn-primary btn-small tooltip" data-tooltip="In thiệp độc bản chứa ảnh & mã QR" onclick="printSpecificMemory('${memory.id}')" style="flex: 1; min-width: 80px;">
+                        🖨️ In
                     </button>
-                    <button class="btn-secondary btn-small btn-danger tooltip" data-tooltip="Xóa ký ức" onclick="deleteArchiveMemory('${memory.id}')">
-                        🗑️ Xóa
+                    <button class="btn-secondary btn-small tooltip" data-tooltip="Tải thiệp dạng PDF để lưu trữ" onclick="downloadMemoryPDF('${memory.id}')" style="flex: 1; min-width: 80px; background: #6c7a89; color: #fff;">
+                        📄 PDF
+                    </button>
+                    <button class="btn-secondary btn-small btn-danger tooltip" data-tooltip="Xóa ký ức" onclick="deleteArchiveMemory('${memory.id}')" style="flex: 0 0 auto;">
+                        🗑️
                     </button>
                 </div>
             `;
@@ -2174,7 +2291,7 @@ function showSharedMemory(memoryId, text, date, time, family, photo, audio) {
             text: decodeURIComponent(text),
             date: date || 'Kỷ niệm',
             time: time || '',
-            photoUrl: photo ? decodeURIComponent(photo) : 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?auto=format&fit=crop&w=600&q=80',
+            photoUrl: photo ? decodeURIComponent(photo) : 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=800&q=80',
             audioUrl: audio ? decodeURIComponent(audio) : '',
             family: family ? decodeURIComponent(family) : 'Gia đình trân quý'
         };
@@ -2248,4 +2365,76 @@ function toggleQRShareAudio() {
         playSvg.classList.remove('hidden');
         pauseSvg.classList.add('hidden');
     }
+}
+
+// --- DOWNLOAD KEPSAKE AS PDF DYNAMICALLY ---
+async function downloadMemoryPDF(memoryId) {
+    const printableNode = document.getElementById('printable-thiep-container');
+    if (!printableNode) return;
+    printableNode.innerHTML = '';
+    
+    // Retrieve specified memory
+    const memory = appState.memories.find(m => m.id === memoryId);
+    if (!memory) return;
+    
+    // Compile print frame structure (same as print)
+    const card = document.createElement('div');
+    card.className = 'thiep-card';
+    
+    card.innerHTML = `
+        <div class="thiep-header">
+            <div class="thiep-title">Lời Chúc 50 Năm</div>
+            <div class="thiep-tagline">"Ký ức gia tộc là di sản ngàn đời"</div>
+        </div>
+        <div class="thiep-body">
+            <div class="thiep-image-box">
+                <img src="${memory.photoUrl}" alt="Family print frame" class="thiep-img">
+            </div>
+            <div class="thiep-message-box">
+                <div class="thiep-message-text">"${memory.text}"</div>
+            </div>
+        </div>
+        <div class="thiep-bottom-row">
+            <div class="thiep-meta-info">
+                <strong>Gia đình:</strong> ${appState.currentUser ? appState.currentUser.familyName : "Dòng họ Nguyễn An"}<br>
+                <strong>Ngày gieo mầm:</strong> ${memory.date} lúc ${memory.time}<br>
+                <strong>Bảo lưu truyền đời bởi:</strong> Lời Chúc 50 Năm Capsule
+            </div>
+            <div class="thiep-qr-box" id="thiep-qr-pdf-node"></div>
+        </div>
+    `;
+    
+    printableNode.appendChild(card);
+    
+    // Generate QR code offline-first
+    let uniqueLink = window.location.href.split('?')[0];
+    uniqueLink += `?memoryId=${memory.id}`;
+    uniqueLink += `&text=${encodeURIComponent(memory.text)}`;
+    uniqueLink += `&date=${memory.date}`;
+    uniqueLink += `&time=${memory.time}`;
+    if (appState.currentUser) {
+        uniqueLink += `&family=${encodeURIComponent(appState.currentUser.familyName)}`;
+    }
+    if (memory.photoUrl && !memory.photoUrl.startsWith('data:image')) {
+        uniqueLink += `&photo=${encodeURIComponent(memory.photoUrl)}`;
+    }
+
+    const qrBox = document.getElementById('thiep-qr-pdf-node');
+    if (qrBox) {
+        await generateQRCode(qrBox, uniqueLink, 80);
+    }
+    
+    await waitForImagesToLoad(printableNode);
+    
+    // Convert to PDF using html2pdf.js
+    const opt = {
+        margin:       10,
+        filename:     `loichuc50nam_thiep_${memory.id}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    
+    // Trigger conversion and download
+    html2pdf().set(opt).from(card).save();
 }
