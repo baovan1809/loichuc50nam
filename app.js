@@ -148,11 +148,43 @@ function saveToLocalStorage() {
 
 function loadFromLocalStorage() {
     const savedMemories = localStorage.getItem('loichuc50nam_memories');
-    if (savedMemories) appState.memories = JSON.parse(savedMemories);
+    if (savedMemories) {
+        let memories = JSON.parse(savedMemories);
+        let migrated = false;
+        // Migration: automatically upgrade old camera placeholder image to the custom brand-aligned keepsake graphic
+        memories = memories.map(m => {
+            if (m.photoUrl && (m.photoUrl.includes('photo-1464998857633-50e59fbf2fe6') || m.photoUrl.includes('photo-1511895426328-dc8714191300'))) {
+                m.photoUrl = 'default_keepsake.png';
+                migrated = true;
+            }
+            return m;
+        });
+        appState.memories = memories;
+        if (migrated) {
+            localStorage.setItem('loichuc50nam_memories', JSON.stringify(appState.memories));
+        }
+    }
     
     const savedOrbs = localStorage.getItem('loichuc50nam_treeOrbs');
     if (savedOrbs) {
-        appState.treeOrbs = JSON.parse(savedOrbs);
+        let orbs = JSON.parse(savedOrbs);
+        let migratedOrbs = false;
+        orbs = orbs.map(orb => {
+            if (orb.images) {
+                orb.images = orb.images.map(img => {
+                    if (img.base64 && (img.base64.includes('photo-1464998857633-50e59fbf2fe6') || img.base64.includes('photo-1511895426328-dc8714191300'))) {
+                        img.base64 = 'default_keepsake.png';
+                        migratedOrbs = true;
+                    }
+                    return img;
+                });
+            }
+            return orb;
+        });
+        appState.treeOrbs = orbs;
+        if (migratedOrbs) {
+            localStorage.setItem('loichuc50nam_treeOrbs', JSON.stringify(appState.treeOrbs));
+        }
     } else {
         // Pre-populate 3 visual orbs for demonstration
         appState.treeOrbs = [
@@ -846,7 +878,7 @@ function handleSaveMemory() {
         date: cleanDateStr,
         time: cleanTimeStr,
         text: draft.text || "Ký ức hình ảnh tinh khôi.",
-        photoUrl: draft.photoUrl || "https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=800&q=80",
+        photoUrl: draft.photoUrl || "default_keepsake.png",
         audioUrl: draft.audioUrl,
         audioDuration: draft.audioDuration || "00:00",
         videoUrl: draft.videoUrl || "",
@@ -941,142 +973,81 @@ function saveToWebCapsule() {
 }
 
 async function syncWithGoogleDrive() {
-    if (!appState.currentUser || !appState.currentUser.email) {
-        showCustomAlert("Lỗi Đồng Bộ", "Không tìm thấy địa chỉ Gmail liên kết. Vui lòng đăng nhập lại!", "❌");
-        return;
-    }
-    
-    // Check if there are any memories
-    const memories = appState.memories;
-    if (memories.length === 0) {
-        showCustomAlert("Trống Ký Ức", "Hiện tại chưa có ký ức nào được tạo. Hãy ghi nhận ít nhất một lời chúc hoặc chụp ảnh trước!", "⏳");
-        return;
-    }
-    
-    const lastMemory = memories[memories.length - 1];
-    
-    // 1. Compile offscreen thiệp card and export as a gorgeous high-fidelity PDF!
-    const printableNode = document.getElementById('printable-thiep-container');
-    if (printableNode) {
-        printableNode.innerHTML = '';
-        const card = document.createElement('div');
-        card.className = 'thiep-card';
+    try {
+        if (!appState.currentUser) {
+            showCustomAlert("Chưa đăng nhập", "Vui lòng đăng nhập tên gia đình ở màn hình chính trước khi thực hiện đồng bộ!", "❌");
+            return;
+        }
         
-        card.innerHTML = `
-            <div class="thiep-header">
-                <div class="thiep-title">Lời Chúc 50 Năm</div>
-                <div class="thiep-tagline">"Ký ức gia tộc là di sản ngàn đời"</div>
+        const memories = appState.memories;
+        if (memories.length === 0) {
+            showCustomAlert("Trống Ký Ức", "Hiện tại chưa có ký ức nào được tạo. Hãy tạo lời chúc hoặc ghi âm trước!", "⏳");
+            return;
+        }
+        
+        const lastMemory = memories[memories.length - 1];
+        
+        // 1. Download PDF (for Photo / Text)
+        let hasPDF = lastMemory.photoUrl || lastMemory.text;
+        if (hasPDF) {
+            await downloadMemoryPDF(lastMemory.id);
+        }
+        
+        // 2. Download raw recorded audio (.mp3) if it exists
+        if (lastMemory.audioUrl) {
+            const audioLink = document.createElement('a');
+            audioLink.href = lastMemory.audioUrl;
+            audioLink.download = `giong_noi_ki_uc_${lastMemory.id}.mp3`;
+            document.body.appendChild(audioLink);
+            audioLink.click();
+            document.body.removeChild(audioLink);
+        }
+
+        // 3. Download raw recorded video (.mp4) if it exists
+        const videoUrl = lastMemory.videoUrl || appState.currentMemoryDraft.videoUrl;
+        if (videoUrl) {
+            const videoLink = document.createElement('a');
+            videoLink.href = videoUrl;
+            videoLink.download = `video_ki_uc_${lastMemory.id}.mp4`;
+            document.body.appendChild(videoLink);
+            videoLink.click();
+            document.body.removeChild(videoLink);
+        }
+        
+        // Construct dynamic file types label
+        let fileTypes = [];
+        if (hasPDF) fileTypes.push("Thiệp PDF nghệ thuật (.pdf)");
+        if (lastMemory.audioUrl) fileTypes.push("Ghi âm giọng nói (.mp3)");
+        if (videoUrl) fileTypes.push("Video quay hình (.mp4)");
+        const fileTypesLabel = fileTypes.join(", ");
+        
+        const email = appState.currentUser.email || "Gmail của bạn";
+        
+        const gdriveMessage = `
+        <div style="text-align: left; margin-top: 10px;">
+            <p style="font-size: 0.95rem; margin-bottom: 12px; color: var(--color-text-brown);">
+                Hệ thống đã tự động xuất và tải xuống các tệp tin ký ức chất lượng cao (**${fileTypesLabel}**) về thiết bị của bạn. 
+                Để lưu giữ vĩnh viễn và an toàn, vui lòng thực hiện tải lên Google Drive của bạn theo hướng dẫn:
+            </p>
+            <div class="step-item" style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; font-size: 0.9rem;">
+                <div style="background: var(--color-gold); color: #fff; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; line-height: 20px;">1</div>
+                <div>Kiểm tra mục tải xuống (Downloads) trên máy tính/điện thoại để tìm các tệp tin vừa tải về.</div>
             </div>
-            <div class="thiep-body">
-                <div class="thiep-image-box">
-                    <img src="${lastMemory.photoUrl}" alt="Family print frame" class="thiep-img">
-                </div>
-                <div class="thiep-message-box">
-                    <div class="thiep-message-text">"${lastMemory.text}"</div>
-                </div>
+            <div class="step-item" style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; font-size: 0.9rem;">
+                <div style="background: var(--color-gold); color: #fff; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; line-height: 20px;">2</div>
+                <div>Mở <strong>Google Drive</strong> của địa chỉ: <strong>${email}</strong>.</div>
             </div>
-            <div class="thiep-bottom-row">
-                <div class="thiep-meta-info">
-                    <strong>Gia đình:</strong> ${appState.currentUser ? appState.currentUser.familyName : "Dòng họ Nguyễn An"}<br>
-                    <strong>Ngày gieo mầm:</strong> ${lastMemory.date} lúc ${lastMemory.time}<br>
-                    <strong>Bảo lưu truyền đời bởi:</strong> Lời Chúc 50 Năm Capsule
-                </div>
-                <div class="thiep-qr-box" id="thiep-qr-gdrive-node"></div>
+            <div class="step-item" style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 12px; font-size: 0.9rem;">
+                <div style="background: var(--color-gold); color: #fff; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; line-height: 20px;">3</div>
+                <div>Tạo thư mục tên <strong>"Lời Chúc 50 Năm"</strong> và kéo thả các tệp vừa tải vào đó. Ký ức của bạn giờ đã được lưu trữ vĩnh viễn và an toàn!</div>
             </div>
+        </div>
         `;
-        
-        printableNode.appendChild(card);
-        
-        // Generate QR code specifically inside the card offline-first
-        let uniqueLink = window.location.href.split('?')[0];
-        uniqueLink += `?memoryId=${lastMemory.id}`;
-        uniqueLink += `&text=${encodeURIComponent(lastMemory.text)}`;
-        uniqueLink += `&date=${lastMemory.date}`;
-        uniqueLink += `&time=${lastMemory.time}`;
-        if (appState.currentUser) {
-            uniqueLink += `&family=${encodeURIComponent(appState.currentUser.familyName)}`;
-        }
-        if (lastMemory.photoUrl && !lastMemory.photoUrl.startsWith('data:image')) {
-            uniqueLink += `&photo=${encodeURIComponent(lastMemory.photoUrl)}`;
-        }
-
-        const qrBox = document.getElementById('thiep-qr-gdrive-node');
-        if (qrBox) {
-            await generateQRCode(qrBox, uniqueLink, 80);
-        }
-        
-        await waitForImagesToLoad(printableNode);
-        
-        // Convert to PDF and download
-        const opt = {
-            margin:       10,
-            filename:     `loichuc50nam_thiep_${lastMemory.id}.pdf`,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2, useCORS: true },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-        html2pdf().set(opt).from(card).save();
+        showCustomAlert("Xuất Tệp & Đồng Bộ Google Drive", gdriveMessage, "💾", "Đã hiểu và tiếp tục");
+    } catch (err) {
+        console.error("Sync Error: ", err);
+        showCustomAlert("Lỗi Đồng Bộ", `Đã xảy ra sự cố trong quá trình xuất tệp: ${err.message}. Vui lòng thử lại!`, "❌");
     }
-    
-    // 2. Download camera snapshot as a raw PNG file if it exists and is base64
-    if (lastMemory.photoUrl && lastMemory.photoUrl.startsWith('data:image')) {
-        const imgLink = document.createElement('a');
-        imgLink.href = lastMemory.photoUrl;
-        imgLink.download = `anh_chup_loichuc_${lastMemory.id}.png`;
-        document.body.appendChild(imgLink);
-        imgLink.click();
-        document.body.removeChild(imgLink);
-    }
-    
-    // 3. Download raw recorded audio (.mp3) if it exists
-    if (lastMemory.audioUrl) {
-        const audioLink = document.createElement('a');
-        audioLink.href = lastMemory.audioUrl;
-        audioLink.download = `giong_noi_ki_uc_${lastMemory.id}.mp3`;
-        document.body.appendChild(audioLink);
-        audioLink.click();
-        document.body.removeChild(audioLink);
-    }
-
-    // 4. Download raw recorded video (.mp4) if it exists
-    const videoUrl = lastMemory.videoUrl || appState.currentMemoryDraft.videoUrl;
-    if (videoUrl) {
-        const videoLink = document.createElement('a');
-        videoLink.href = videoUrl;
-        videoLink.download = `video_ki_uc_${lastMemory.id}.mp4`;
-        document.body.appendChild(videoLink);
-        videoLink.click();
-        document.body.removeChild(videoLink);
-    }
-    
-    // Construct dynamic file types label
-    let fileTypes = [];
-    if (lastMemory.photoUrl || lastMemory.text) fileTypes.push("Thiệp PDF nghệ thuật");
-    if (lastMemory.photoUrl && lastMemory.photoUrl.startsWith('data:image')) fileTypes.push("Ảnh gốc PNG");
-    if (lastMemory.audioUrl) fileTypes.push("Ghi âm giọng nói MP3");
-    if (videoUrl) fileTypes.push("Video quay hình MP4");
-    const fileTypesLabel = fileTypes.join(", ");
-    
-    const gdriveMessage = `
-    <div style="text-align: left; margin-top: 10px;">
-        <p style="font-size: 0.95rem; margin-bottom: 12px; color: var(--color-text-brown);">
-            Do chính sách bảo mật nghiêm ngặt của Google, website không thể tự động đăng nhập và ghi tệp âm thầm vào Drive của bạn. Để bảo tồn vĩnh viễn, hệ thống đã tự động xuất và tải xuống các tệp tin ký ức chất lượng cao (**${fileTypesLabel}**) về thiết bị của bạn.
-        </p>
-        <div class="step-item" style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; font-size: 0.9rem;">
-            <div style="background: var(--color-gold); color: #fff; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; line-height: 20px;">1</div>
-            <div>Kiểm tra thư mục tải xuống trên thiết bị để tìm các tệp tin vừa tải về.</div>
-        </div>
-        <div class="step-item" style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; font-size: 0.9rem;">
-            <div style="background: var(--color-gold); color: #fff; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; line-height: 20px;">2</div>
-            <div>Truy cập <strong>Google Drive</strong> của địa chỉ: <strong>${appState.currentUser.email}</strong>.</div>
-        </div>
-        <div class="step-item" style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 12px; font-size: 0.9rem;">
-            <div style="background: var(--color-gold); color: #fff; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; line-height: 20px;">3</div>
-            <div>Tạo thư mục tên <strong>"Lời Chúc 50 Năm"</strong> và kéo thả các tệp vừa tải vào đó. Ký ức của bạn giờ đã được lưu trữ vĩnh viễn và an toàn!</div>
-        </div>
-    </div>
-    `;
-    showCustomAlert("Xuất Tệp & Đồng Bộ Google Drive", gdriveMessage, "💾", "Đã hiểu và tiếp tục");
 }
 
 // Offline-first QR Code generation helper
@@ -1221,7 +1192,7 @@ async function triggerCardPrinting(memoryId = null) {
             date: '22/05/2026',
             time: '20:30',
             text: 'Chúc gia đình ta luôn hòa thuận, yêu thương nhau suốt đời. Chúc con cháu 50 năm sau luôn nhớ về cội nguồn dòng họ Nguyễn An.',
-            photoUrl: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=800&q=80',
+            photoUrl: 'default_keepsake.png',
             size: '224 KB'
         };
     }
@@ -1336,7 +1307,7 @@ function renderArchiveGrid() {
             
             card.innerHTML = `
                 <div class="archive-card-image">
-                    <img src="${memory.photoUrl || 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=800&q=80'}" alt="Keepsake image">
+                    <img src="${memory.photoUrl || 'default_keepsake.png'}" alt="Keepsake image">
                     <div class="archive-card-badge">${typeLabel}</div>
                 </div>
                 <div class="archive-card-content">
@@ -2291,7 +2262,7 @@ function showSharedMemory(memoryId, text, date, time, family, photo, audio) {
             text: decodeURIComponent(text),
             date: date || 'Kỷ niệm',
             time: time || '',
-            photoUrl: photo ? decodeURIComponent(photo) : 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=800&q=80',
+            photoUrl: photo ? decodeURIComponent(photo) : 'default_keepsake.png',
             audioUrl: audio ? decodeURIComponent(audio) : '',
             family: family ? decodeURIComponent(family) : 'Gia đình trân quý'
         };
