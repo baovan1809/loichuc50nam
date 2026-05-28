@@ -498,20 +498,19 @@ function setupSpeechRecognition() {
     if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
         recognition.continuous = true;
-        recognition.interimResults = true;
+        recognition.interimResults = true; // Enable real-time interim results!
         recognition.lang = 'vi-VN'; // Vietnamese language localization
         
         recognition.onresult = (event) => {
-            let finalTranscript = '';
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-                if (event.results[i].isFinal) {
-                    finalTranscript += event.results[i][0].transcript + ' ';
-                }
+            let fullText = '';
+            // Rebuild the entire transcript from all results to show real-time word-by-word AI recognition!
+            for (let i = 0; i < event.results.length; ++i) {
+                fullText += event.results[i][0].transcript + ' ';
             }
             
-            if (finalTranscript) {
-                const textbox = document.getElementById('speech-transcript-textarea');
-                textbox.value += finalTranscript;
+            const textbox = document.getElementById('speech-transcript-textarea');
+            if (textbox && fullText.trim()) {
+                textbox.value = fullText;
                 
                 // Keep cursor at bottom
                 textbox.scrollTop = textbox.scrollHeight;
