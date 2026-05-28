@@ -1305,9 +1305,8 @@ function renderArchiveGrid() {
                 typeLabel += ' & Video';
             }
             
-            card.innerHTML = `
                 <div class="archive-card-image">
-                    <img src="${memory.photoUrl || 'default_keepsake.png'}" alt="Keepsake image">
+                    <img src="${memory.photoUrl || 'default_keepsake.png'}" alt="Keepsake image" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=800&q=80';">
                     <div class="archive-card-badge">${typeLabel}</div>
                 </div>
                 <div class="archive-card-content">
@@ -2348,6 +2347,18 @@ async function downloadMemoryPDF(memoryId) {
     const memory = appState.memories.find(m => m.id === memoryId);
     if (!memory) return;
     
+    // Self-healing fallback: if html2pdf library is blocked or missing (e.g. file:// protocol or CDN issue)
+    if (typeof html2pdf === 'undefined') {
+        console.warn("html2pdf is not loaded. Using fallback raw file downloads.");
+        downloadMemoryFallback(memory);
+        showCustomAlert(
+            "Tải Tệp Ký Ức Dự Phòng",
+            "Do trình duyệt của bạn đang chặn bộ dựng PDF (do giao thức tệp cục bộ tệp <strong>file://</strong> hoặc lỗi mạng), hệ thống đã tự động xuất và tải về tệp tin **bức thư tay dạng văn bản (.txt)** và **ảnh gốc (.png/.jpeg)** dự phòng cực kỳ an toàn về máy của bạn! Hãy tải trang web online hoặc mở bằng máy chủ Local Server để tải tệp PDF thiệp nghệ thuật hoàn hảo nhé!",
+            "💾"
+        );
+        return;
+    }
+    
     // Compile print frame structure (same as print)
     const card = document.createElement('div');
     card.className = 'thiep-card';
@@ -2359,7 +2370,7 @@ async function downloadMemoryPDF(memoryId) {
         </div>
         <div class="thiep-body">
             <div class="thiep-image-box">
-                <img src="${memory.photoUrl}" alt="Family print frame" class="thiep-img">
+                <img src="${memory.photoUrl}" alt="Family print frame" class="thiep-img" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=800&q=80';">
             </div>
             <div class="thiep-message-box">
                 <div class="thiep-message-text">"${memory.text}"</div>
@@ -2408,4 +2419,29 @@ async function downloadMemoryPDF(memoryId) {
     
     // Trigger conversion and download
     html2pdf().set(opt).from(card).save();
+}
+
+// Self-healing download fallback helper for when html2pdf is not loaded
+function downloadMemoryFallback(memory) {
+    // 1. Download text letter as a .txt file
+    if (memory.text) {
+        const textLink = document.createElement('a');
+        const file = new Blob([memory.text], { type: 'text/plain; charset=utf-8' });
+        textLink.href = URL.createObjectURL(file);
+        textLink.download = `thu_tay_ki_uc_${memory.id}.txt`;
+        document.body.appendChild(textLink);
+        textLink.click();
+        document.body.removeChild(textLink);
+    }
+    
+    // 2. Download raw image if it exists
+    if (memory.photoUrl) {
+        // If it's a relative path default_keepsake.png or external, trigger download
+        const imgLink = document.createElement('a');
+        imgLink.href = memory.photoUrl;
+        imgLink.download = memory.photoUrl.startsWith('data:image') ? `anh_chup_ki_uc_${memory.id}.png` : `hinh_anh_ki_uc_${memory.id}.jpg`;
+        document.body.appendChild(imgLink);
+        imgLink.click();
+        document.body.removeChild(imgLink);
+    }
 }
