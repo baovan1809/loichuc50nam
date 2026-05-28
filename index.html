@@ -839,7 +839,66 @@
         </div>
     </div>
 
+    <!-- 9. QR SHARE CARD VIEWER MODAL -->
+    <div id="qr-share-viewer-modal" class="modal-overlay hidden">
+        <div class="modal-card large-modal luxury-border glass-panel" style="max-width: 680px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="qr-share-title">Thiệp Ký Ức Gia Đình</h3>
+                <button class="modal-close-btn" onclick="closeQRShareViewer()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-6 h-6">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="saved-main-content" style="flex-direction: column; gap: 20px;">
+                    <div class="preview-center-card" style="margin-bottom: 0;">
+                        <!-- Left Side: Image Preview -->
+                        <div class="preview-left-side">
+                            <div class="preview-image-wrapper">
+                                <img id="qr-share-img" src="" alt="Family memory" class="preview-main-img">
+                                <div class="preview-date-badge">
+                                    <span class="date-tag" id="qr-share-date"></span>
+                                    <span class="time-tag" id="qr-share-time"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Right Side: Message text and Audio Playback -->
+                        <div class="preview-right-side">
+                            <div class="written-message-preview">
+                                <svg class="quotes-icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.988zm-12 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.154c-2.433.914-3.996 3.635-3.996 5.846h3.999v10h-9.999z"/>
+                                </svg>
+                                <p class="message-typography" id="qr-share-text" style="font-size: 1.1rem; line-height: 1.8; font-family: 'Playfair Display', serif;"></p>
+                            </div>
+                            <!-- Audio playback component -->
+                            <div class="audio-playback-container hidden" id="qr-share-audio-container" style="margin-top: 15px;">
+                                <button class="audio-play-btn" id="qr-share-audio-btn" onclick="toggleQRShareAudio()">
+                                    <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor" id="qr-share-play-icon">
+                                        <polygon points="5 3 19 12 5 21 5 3"/>
+                                    </svg>
+                                    <svg class="pause-icon hidden" viewBox="0 0 24 24" fill="currentColor" id="qr-share-pause-icon">
+                                        <rect x="6" y="4" width="4" height="16"/>
+                                        <rect x="14" y="4" width="4" height="16"/>
+                                    </svg>
+                                </button>
+                                <span class="audio-duration" id="qr-share-audio-duration" style="font-weight: bold; margin-left: 10px; color: var(--color-gold);">Nghe giọng nói gia đình</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sidebar-section text-center" style="background: rgba(214,175,55,0.05); padding: 15px; border-radius: 8px;">
+                        <span class="gold-text" style="font-weight: bold; font-size: 1rem;" id="qr-share-family-tag">Gia đình trân quý</span>
+                        <p class="subtle-caption mt-1">Ký ức này được bảo tồn vĩnh hằng trên Cây Hằng Hữu.</p>
+                        <button class="btn-primary btn-small mt-2" onclick="closeQRShareViewer()">Truy cập Trang chủ Lời Chúc 50 Năm</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Responsive Bottom Navigation Tab Bar for Mobile Devices -->
+
     <div id="mobile-bottom-nav" class="mobile-bottom-nav hidden">
         <button class="mobile-nav-item active" onclick="switchView('landing-view')">
             <span class="mobile-nav-icon">🏡</span>

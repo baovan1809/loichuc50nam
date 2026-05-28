@@ -115,6 +115,20 @@ document.addEventListener('DOMContentLoaded', () => {
             showCustomAlert("Lỗi Kết Nối Nhạc", "Không thể kết nối máy chủ nhạc hoài niệm. Vui lòng chọn bản nhạc khác trong danh sách hoặc kiểm tra kết nối mạng!", "🎵");
         });
     }
+
+    // Check if shared memory is requested via URL QR parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const memoryId = urlParams.get('memoryId');
+    const sharedText = urlParams.get('text');
+    const sharedDate = urlParams.get('date');
+    const sharedTime = urlParams.get('time');
+    const sharedFamily = urlParams.get('family');
+    const sharedPhoto = urlParams.get('photo');
+    const sharedAudio = urlParams.get('audio');
+    
+    if (memoryId || sharedText) {
+        showSharedMemory(memoryId, sharedText, sharedDate, sharedTime, sharedFamily, sharedPhoto, sharedAudio);
+    }
 });
 
 // --- LOCAL STORAGE HELPERS ---
@@ -387,9 +401,15 @@ async function toggleAudioRecording() {
             micBtn.classList.add('recording');
             mainActionBtn.innerText = "Dừng ghi âm";
             
-            // Trigger Speech Recognition if toggle is ON
+            // Trigger Speech Recognition if toggle is ON with a 300ms delay to prevent hardware conflicts
             if (appState.speechEnabled && appState.speechRecognition) {
-                appState.speechRecognition.start();
+                setTimeout(() => {
+                    try {
+                        appState.speechRecognition.start();
+                    } catch (e) {
+                        console.warn("Speech recognition start failed or already active: ", e);
+                    }
+                }, 300);
             }
             
             // Timer interval
@@ -503,6 +523,20 @@ function setupSpeechRecognition() {
         
         recognition.onerror = (e) => {
             console.error("Speech Recognition Error: ", e);
+            if (e.error === 'not-allowed') {
+                showCustomAlert("Quyền truy cập Micro bị chặn", "Vui lòng cho phép quyền truy cập Microphone của trình duyệt để sử dụng tính năng AI dịch chữ!", "🎙️");
+            }
+        };
+        
+        // Auto-restart speech engine if it stops unexpectedly during active recording (long silence)
+        recognition.onend = () => {
+            if (appState.audioIsRecording && appState.speechEnabled) {
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.warn("Speech recognition auto-restart failed: ", e);
+                }
+            }
         };
         
         appState.speechRecognition = recognition;
@@ -524,11 +558,29 @@ function toggleSpeechToText() {
         badge.classList.add('btn-primary');
         label.innerText = "AI Dịch chữ: Bật";
         box.classList.remove('hidden');
+        
+        // If already actively recording, start the recognition instantly!
+        if (appState.audioIsRecording && appState.speechRecognition) {
+            try {
+                appState.speechRecognition.start();
+            } catch (e) {
+                console.warn("Speech recognition start failed or already active: ", e);
+            }
+        }
     } else {
         badge.classList.remove('btn-primary');
         badge.classList.add('btn-secondary');
         label.innerText = "AI Dịch chữ: Tắt";
         box.classList.add('hidden');
+        
+        // If actively recording, stop the recognition immediately!
+        if (appState.speechRecognition) {
+            try {
+                appState.speechRecognition.stop();
+            } catch (e) {
+                console.warn("Speech recognition stop failed: ", e);
+            }
+        }
     }
 }
 
@@ -995,8 +1047,29 @@ async function showQRCodePopup() {
     canvasNode.style.boxShadow = "var(--shadow-gold-glow)";
     canvasNode.style.display = "inline-block";
     
-    // Simulate unique capsule retrieval link
-    const uniqueLink = `https://loichuc50nam.vn/capsule/id_${Date.now()}`;
+    // Get last saved memory details to encode
+    const memories = appState.memories;
+    const lastMemory = memories[memories.length - 1];
+    
+    let uniqueLink = window.location.href.split('?')[0]; // Current live site URL!
+    if (lastMemory) {
+        // Construct the URL with memoryId and sharing parameters
+        uniqueLink += `?memoryId=${lastMemory.id}`;
+        uniqueLink += `&text=${encodeURIComponent(lastMemory.text)}`;
+        uniqueLink += `&date=${lastMemory.date}`;
+        uniqueLink += `&time=${lastMemory.time}`;
+        
+        if (appState.currentUser) {
+            uniqueLink += `&family=${encodeURIComponent(appState.currentUser.familyName)}`;
+        }
+        
+        // If the photo is not local base64 (i.e. it is a demo url), we can pass it
+        if (lastMemory.photoUrl && !lastMemory.photoUrl.startsWith('data:image')) {
+            uniqueLink += `&photo=${encodeURIComponent(lastMemory.photoUrl)}`;
+        }
+    } else {
+        uniqueLink += `?specimen=true`;
+    }
     
     await generateQRCode(canvasNode, uniqueLink, 160);
 }
@@ -1080,7 +1153,18 @@ async function triggerCardPrinting(memoryId = null) {
     printableNode.appendChild(card);
     
     // Generate QR specifically inside printable thiệp box offline-first
-    const uniqueLink = `https://loichuc50nam.vn/capsule/id_${memory.id}`;
+    let uniqueLink = window.location.href.split('?')[0];
+    uniqueLink += `?memoryId=${memory.id}`;
+    uniqueLink += `&text=${encodeURIComponent(memory.text)}`;
+    uniqueLink += `&date=${memory.date}`;
+    uniqueLink += `&time=${memory.time}`;
+    if (appState.currentUser) {
+        uniqueLink += `&family=${encodeURIComponent(appState.currentUser.familyName)}`;
+    }
+    if (memory.photoUrl && !memory.photoUrl.startsWith('data:image')) {
+        uniqueLink += `&photo=${encodeURIComponent(memory.photoUrl)}`;
+    }
+
     const qrBox = document.getElementById('thiep-qr-print-node');
     if (qrBox) {
         await generateQRCode(qrBox, uniqueLink, 80);
@@ -2069,5 +2153,100 @@ function drawCapsuleFrame() {
         ctx.fillRect(-10, 14, 12, 2);
         
         ctx.restore();
+    }
+}
+
+// --- QR SHARE VIEWER CORE FUNCTIONS ---
+function showSharedMemory(memoryId, text, date, time, family, photo, audio) {
+    let finalMemory = null;
+    
+    // 1. Try to load from LocalStorage first (same device benefit)
+    if (memoryId) {
+        const savedMemories = localStorage.getItem('loichuc50nam_memories');
+        if (savedMemories) {
+            const memories = JSON.parse(savedMemories);
+            finalMemory = memories.find(m => m.id === memoryId);
+        }
+    }
+    
+    // 2. Fallback to URL encoded query details (different device benefit)
+    if (!finalMemory && text) {
+        finalMemory = {
+            text: decodeURIComponent(text),
+            date: date || 'Kỷ niệm',
+            time: time || '',
+            photoUrl: photo ? decodeURIComponent(photo) : 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?auto=format&fit=crop&w=600&q=80',
+            audioUrl: audio ? decodeURIComponent(audio) : '',
+            family: family ? decodeURIComponent(family) : 'Gia đình trân quý'
+        };
+    }
+    
+    if (finalMemory) {
+        // Open the shared viewer modal and bind data
+        document.getElementById('qr-share-text').innerText = finalMemory.text;
+        document.getElementById('qr-share-date').innerText = finalMemory.date;
+        document.getElementById('qr-share-time').innerText = finalMemory.time;
+        document.getElementById('qr-share-img').src = finalMemory.photoUrl;
+        
+        const familyTag = document.getElementById('qr-share-family-tag');
+        if (familyTag) {
+            familyTag.innerText = `Dòng họ: ${finalMemory.family || 'Trân quý vĩnh hằng'}`;
+        }
+        
+        // Handle audio playback container
+        const audioContainer = document.getElementById('qr-share-audio-container');
+        if (finalMemory.audioUrl) {
+            audioContainer.classList.remove('hidden');
+            appState.qrShareAudioUrl = finalMemory.audioUrl;
+        } else {
+            audioContainer.classList.add('hidden');
+            appState.qrShareAudioUrl = '';
+        }
+        
+        // Open the modal
+        document.getElementById('qr-share-viewer-modal').classList.remove('hidden');
+    }
+}
+
+function closeQRShareViewer() {
+    document.getElementById('qr-share-viewer-modal').classList.add('hidden');
+    // Clear URL parameters to prevent modal showing again on refresh
+    window.history.pushState({}, document.title, window.location.pathname);
+    
+    // Stop any active qr share audio playback
+    const player = document.getElementById('ambient-audio-player');
+    if (player && player.src === appState.qrShareAudioUrl) {
+        player.pause();
+    }
+}
+
+function toggleQRShareAudio() {
+    const player = document.getElementById('ambient-audio-player');
+    const playSvg = document.getElementById('qr-share-play-icon');
+    const pauseSvg = document.getElementById('qr-share-pause-icon');
+    
+    if (!player || !appState.qrShareAudioUrl) return;
+    
+    // Pause background ambient music if active
+    if (appState.musicIsPlaying) {
+        toggleAmbientMusic();
+    }
+    
+    const isPlaying = !playSvg.classList.contains('hidden');
+    
+    if (isPlaying) {
+        player.src = appState.qrShareAudioUrl;
+        player.play();
+        playSvg.classList.add('hidden');
+        pauseSvg.classList.remove('hidden');
+        
+        player.onended = () => {
+            playSvg.classList.remove('hidden');
+            pauseSvg.classList.add('hidden');
+        };
+    } else {
+        player.pause();
+        playSvg.classList.remove('hidden');
+        pauseSvg.classList.add('hidden');
     }
 }
