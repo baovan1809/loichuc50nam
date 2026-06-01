@@ -645,6 +645,249 @@ function clearTranscript() {
     appState.currentMemoryDraft.text = '';
 }
 
+// --- Empty Template Printing System ---
+appState.selectedTemplateToPrint = 'eden';
+appState.selectedTemplateSize = 'a4';
+appState.selectedTemplateOrientation = 'landscape';
+
+function openPrintTemplateModal() {
+    appState.selectedTemplateToPrint = 'eden';
+    appState.selectedTemplateSize = 'a4';
+    appState.selectedTemplateOrientation = 'landscape';
+    
+    // Reset active highlights
+    document.querySelectorAll('.template-choice-card').forEach(c => {
+        c.classList.remove('active');
+        c.style.borderColor = 'rgba(74, 59, 50, 0.15)';
+        c.style.background = 'transparent';
+        c.querySelector('strong').style.color = 'var(--color-text-brown)';
+    });
+    document.querySelectorAll('.template-size-card').forEach(c => {
+        c.classList.remove('active');
+        c.style.borderColor = 'rgba(74, 59, 50, 0.15)';
+        c.style.background = 'transparent';
+        c.querySelector('strong').style.color = 'var(--color-text-brown)';
+    });
+    document.querySelectorAll('.template-orientation-card').forEach(c => {
+        c.classList.remove('active');
+        c.style.borderColor = 'rgba(74, 59, 50, 0.15)';
+        c.style.background = 'transparent';
+        c.querySelector('strong').style.color = 'var(--color-text-brown)';
+    });
+    
+    // Highlight defaults
+    const choices = document.querySelectorAll('.template-choice-card');
+    if (choices.length > 0) {
+        choices[0].classList.add('active');
+        choices[0].style.borderColor = 'var(--color-gold-dark)';
+        choices[0].style.background = 'rgba(214,175,55,0.03)';
+        choices[0].querySelector('strong').style.color = 'var(--color-gold-dark)';
+    }
+    const orientations = document.querySelectorAll('.template-orientation-card');
+    if (orientations.length > 0) {
+        orientations[0].classList.add('active');
+        orientations[0].style.borderColor = 'var(--color-gold-dark)';
+        orientations[0].style.background = 'rgba(214,175,55,0.03)';
+        orientations[0].querySelector('strong').style.color = 'var(--color-gold-dark)';
+    }
+    const sizes = document.querySelectorAll('.template-size-card');
+    if (sizes.length > 0) {
+        sizes[0].classList.add('active');
+        sizes[0].style.borderColor = 'var(--color-gold-dark)';
+        sizes[0].style.background = 'rgba(214,175,55,0.03)';
+        sizes[0].querySelector('strong').style.color = 'var(--color-gold-dark)';
+    }
+    
+    const modal = document.getElementById('print-template-modal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function openPrintTemplateModalWithTemplate(templateName) {
+    // Open standard modal
+    openPrintTemplateModal();
+    
+    // Programmatically select the template choice card
+    const element = document.querySelector(`.template-choice-card[onclick*="'${templateName}'"]`) || 
+                    document.querySelector(`.template-choice-card[onclick*="\\"${templateName}\\""]`);
+    if (element) {
+        selectTemplateToPrint(templateName, element);
+    } else {
+        appState.selectedTemplateToPrint = templateName;
+    }
+}
+
+function closePrintTemplateModal() {
+    const modal = document.getElementById('print-template-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function selectTemplateToPrint(templateName, element) {
+    appState.selectedTemplateToPrint = templateName;
+    document.querySelectorAll('.template-choice-card').forEach(c => {
+        c.classList.remove('active');
+        c.style.borderColor = 'rgba(74, 59, 50, 0.15)';
+        c.style.background = 'transparent';
+        c.querySelector('strong').style.color = 'var(--color-text-brown)';
+    });
+    if (element) {
+        element.classList.add('active');
+        element.style.borderColor = 'var(--color-gold-dark)';
+        element.style.background = 'rgba(214,175,55,0.03)';
+        element.querySelector('strong').style.color = 'var(--color-gold-dark)';
+    }
+}
+
+function selectTemplateOrientation(orientation, element) {
+    appState.selectedTemplateOrientation = orientation;
+    document.querySelectorAll('.template-orientation-card').forEach(c => {
+        c.classList.remove('active');
+        c.style.borderColor = 'rgba(74, 59, 50, 0.15)';
+        c.style.background = 'transparent';
+        c.querySelector('strong').style.color = 'var(--color-text-brown)';
+    });
+    if (element) {
+        element.classList.add('active');
+        element.style.borderColor = 'var(--color-gold-dark)';
+        element.style.background = 'rgba(214,175,55,0.03)';
+        element.querySelector('strong').style.color = 'var(--color-gold-dark)';
+    }
+}
+
+function selectTemplateSize(sizeName, element) {
+    appState.selectedTemplateSize = sizeName;
+    document.querySelectorAll('.template-size-card').forEach(c => {
+        c.classList.remove('active');
+        c.style.borderColor = 'rgba(74, 59, 50, 0.15)';
+        c.style.background = 'transparent';
+        c.querySelector('strong').style.color = 'var(--color-text-brown)';
+    });
+    if (element) {
+        element.classList.add('active');
+        element.style.borderColor = 'var(--color-gold-dark)';
+        element.style.background = 'rgba(214,175,55,0.03)';
+        element.querySelector('strong').style.color = 'var(--color-gold-dark)';
+    }
+}
+
+function downloadSelectedTemplate() {
+    const templateName = appState.selectedTemplateToPrint || 'eden';
+    const sizeName = appState.selectedTemplateSize || 'a4';
+    const orientation = appState.selectedTemplateOrientation || 'landscape';
+    
+    // Create a beautiful premium overlay alert to inform user that high-res image generation has started
+    const alertOverlay = document.createElement('div');
+    alertOverlay.style.position = 'fixed';
+    alertOverlay.style.top = '0';
+    alertOverlay.style.left = '0';
+    alertOverlay.style.width = '100%';
+    alertOverlay.style.height = '100%';
+    alertOverlay.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    alertOverlay.style.zIndex = '999999';
+    alertOverlay.style.display = 'flex';
+    alertOverlay.style.alignItems = 'center';
+    alertOverlay.style.justifyContent = 'center';
+    alertOverlay.style.color = '#fff';
+    alertOverlay.style.fontFamily = "'Playfair Display', serif";
+    alertOverlay.style.fontSize = '1.2rem';
+    alertOverlay.innerHTML = `<div style="background:#4a3b32; padding:20px 40px; border-radius:10px; border:2px solid #d4af37; text-align:center;">⌛ Đang khởi tạo ảnh khung độ phân giải cao...</div>`;
+    document.body.appendChild(alertOverlay);
+
+    // Load the image to render onto a canvas for high-quality, perfectly-oriented PNG download
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = `${templateName}.png?v=1.2.0`;
+    img.onload = function() {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Define high-resolution output dimensions (A4 standard at 300 DPI is approx 3508 x 2480 pixels)
+        const baseWidth = 3508;
+        const baseHeight = 2480;
+        
+        if (orientation === 'portrait') {
+            // Swap width and height for physical portrait layout
+            canvas.width = baseHeight;
+            canvas.height = baseWidth;
+            
+            // Rotate canvas 90 degrees to physically re-orient the landscape image into portrait
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(90 * Math.PI / 180);
+            ctx.drawImage(img, -baseWidth / 2, -baseHeight / 2, baseWidth, baseHeight);
+        } else {
+            canvas.width = baseWidth;
+            canvas.height = baseHeight;
+            ctx.drawImage(img, 0, 0, baseWidth, baseHeight);
+        }
+        
+        // Trigger high-quality PNG download
+        const link = document.createElement('a');
+        link.download = `Khung_Mau_${templateName.toUpperCase()}_${sizeName.toUpperCase()}_${orientation.toUpperCase()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        document.body.removeChild(alertOverlay);
+    };
+    img.onerror = function() {
+        // Fallback to direct raw file download if canvas rendering fails
+        const link = document.createElement('a');
+        link.href = `${templateName}.png?v=1.2.0`;
+        link.download = `Mau_Thiep_${templateName.charAt(0).toUpperCase() + templateName.slice(1)}_Goc.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        document.body.removeChild(alertOverlay);
+    };
+}
+
+async function printEmptyTemplate() {
+    const templateName = appState.selectedTemplateToPrint || 'eden';
+    const sizeName = appState.selectedTemplateSize || 'a4';
+    const orientation = appState.selectedTemplateOrientation || 'landscape';
+    
+    closePrintTemplateModal();
+    
+    const container = document.getElementById('printable-template-only-container');
+    if (!container) return;
+    container.innerHTML = `<img src="${templateName}.png?v=1.2.0" alt="Empty Template Color">`;
+    
+    // Add print orientation and empty template classes to body
+    document.body.classList.remove(
+        'print-size-a4', 'print-size-a5', 
+        'print-orientation-landscape', 'print-orientation-portrait', 
+        'print-template-only', 'print-template-eden', 
+        'print-template-butterfly', 'print-template-royal'
+    );
+    document.body.classList.add(`print-size-${sizeName}`);
+    document.body.classList.add(`print-orientation-${orientation}`);
+    document.body.classList.add('print-template-only');
+    document.body.classList.add(`print-template-${templateName}`);
+    
+    // Inject dynamic @page style to force orientation and zero margins
+    let printStyleNode = document.getElementById('dynamic-print-page-style');
+    if (!printStyleNode) {
+        printStyleNode = document.createElement('style');
+        printStyleNode.id = 'dynamic-print-page-style';
+        document.head.appendChild(printStyleNode);
+    }
+    
+    const sizeParam = sizeName.toUpperCase();
+    printStyleNode.innerHTML = `@media print { @page { size: ${sizeParam} ${orientation}; margin: 0; } }`;
+    
+    await waitForImagesToLoad(container);
+    
+    // Trigger direct browser printing
+    window.print();
+    
+    // Cleanup class after print dialog is closed
+    setTimeout(() => {
+        document.body.classList.remove(
+            'print-template-only', 'print-template-eden', 
+            'print-template-butterfly', 'print-template-royal'
+        );
+    }, 1000);
+}
+
 // 3. Physical Camera Capture
 async function openCameraModal() {
     const modal = document.getElementById('camera-modal');
@@ -1197,19 +1440,31 @@ async function triggerCardPrinting(memoryId = null) {
         };
     }
     
+    // Check if there is a valid captured or uploaded photo in the memory
+    const hasValidPhoto = memory.photoUrl && 
+                          memory.photoUrl !== 'default_keepsake.png' && 
+                          memory.photoUrl.trim() !== '' && 
+                          !memory.photoUrl.startsWith('default_keepsake');
+
     // Compile gorgeous print frame structure
     const card = document.createElement('div');
-    card.className = 'thiep-card';
+    card.className = `thiep-card theme-${appState.selectedPrintTheme || 'butterfly'} ${hasValidPhoto ? 'has-photo' : 'no-photo'}`;
+    
+    // Fetch high-fidelity thematic SVG ornaments matching the design language of the web
+    const themeOrnaments = getPrintThemeSVG(appState.selectedPrintTheme || 'butterfly');
     
     card.innerHTML = `
+        ${themeOrnaments}
         <div class="thiep-header">
             <div class="thiep-title">Lời Chúc 50 Năm</div>
             <div class="thiep-tagline">"Ký ức gia tộc là di sản ngàn đời"</div>
         </div>
-        <div class="thiep-body">
+        <div class="thiep-body ${hasValidPhoto ? 'layout-split' : 'layout-full'}">
+            ${hasValidPhoto ? `
             <div class="thiep-image-box">
                 <img src="${memory.photoUrl}" alt="Family print frame" class="thiep-img">
             </div>
+            ` : ''}
             <div class="thiep-message-box">
                 <div class="thiep-message-text">"${memory.text}"</div>
             </div>
@@ -1249,6 +1504,268 @@ async function triggerCardPrinting(memoryId = null) {
     
     // Fire real physical printer connection!
     window.print();
+}
+
+// Generate premium vector SVG ornaments matching the gorgeous theme language of the web
+function getPrintThemeSVG(themeName) {
+    if (themeName === 'butterfly') {
+        return `
+        <!-- Butterfly Theme Luxury SVGs -->
+        <div class="theme-ornaments butterfly-decorations" style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; box-sizing:border-box;">
+            <!-- Left Top Crystalline Butterfly -->
+            <svg class="theme-svg top-left-butterfly" viewBox="0 0 100 100" style="position: absolute; top: 12mm; left: 12mm; width: 60px; height: 60px; filter: drop-shadow(0 2px 8px rgba(58, 134, 200, 0.3)); pointer-events: none;">
+                <path d="M50 50 C40 30, 20 20, 10 35 C5 45, 15 55, 30 50 C20 60, 15 75, 25 80 C35 85, 45 70, 50 50 Z" fill="rgba(255,255,255,0.9)" stroke="#3a86c8" stroke-width="1.8"/>
+                <path d="M50 50 C60 30, 80 20, 90 35 C95 45, 85 55, 70 50 C80 60, 85 75, 75 80 C65 85, 55 70, 50 50 Z" fill="rgba(255,255,255,0.9)" stroke="#3a86c8" stroke-width="1.8"/>
+                <path d="M50 30 C48 20, 42 15, 42 15 M50 30 C52 20, 58 15, 58 15" fill="none" stroke="#AA7C11" stroke-width="1.2"/>
+                <circle cx="42" cy="15" r="1.5" fill="#AA7C11"/>
+                <circle cx="58" cy="15" r="1.5" fill="#AA7C11"/>
+                <path d="M50 32 L50 75" stroke="#AA7C11" stroke-width="1.5"/>
+            </svg>
+            <!-- Right Bottom Crystalline Butterfly -->
+            <svg class="theme-svg bottom-right-butterfly" viewBox="0 0 100 100" style="position: absolute; bottom: 12mm; right: 12mm; width: 50px; height: 50px; filter: drop-shadow(0 2px 6px rgba(58, 134, 200, 0.25)); pointer-events: none; transform: rotate(-30deg);">
+                <path d="M50 50 C40 30, 20 20, 10 35 C5 45, 15 55, 30 50 C20 60, 15 75, 25 80 C35 85, 45 70, 50 50 Z" fill="rgba(255,255,255,0.9)" stroke="#3a86c8" stroke-width="1.5"/>
+                <path d="M50 50 C60 30, 80 20, 90 35 C95 45, 85 55, 70 50 C80 60, 85 75, 75 80 C65 85, 55 70, 50 50 Z" fill="rgba(255,255,255,0.9)" stroke="#3a86c8" stroke-width="1.5"/>
+                <path d="M50 32 L50 72" stroke="#AA7C11" stroke-width="1.2"/>
+            </svg>
+        </div>
+        `;
+    } else if (themeName === 'eden') {
+        return `
+        <!-- Eden Theme Foliage SVGs -->
+        <div class="theme-ornaments eden-decorations" style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; box-sizing:border-box;">
+            <!-- Top-Left Foliage -->
+            <svg class="theme-svg top-left-vine" viewBox="0 0 120 120" style="position: absolute; top: -2px; left: -2px; width: 140px; height: 140px; pointer-events: none;">
+                <!-- Main vine branches -->
+                <path d="M0 0 Q40 5, 60 35 T100 80" fill="none" stroke="#27ae60" stroke-width="2"/>
+                <path d="M0 0 Q10 40, 35 60 T80 100" fill="none" stroke="#aa7c11" stroke-width="1.5"/>
+                <!-- Leaves -->
+                <path d="M25 12 C18 20, 22 28, 32 24 C38 20, 34 12, 25 12 Z" fill="#27ae60" stroke="#1e7e34" stroke-width="0.5"/>
+                <path d="M45 28 C38 35, 42 42, 52 38 C58 35, 54 28, 45 28 Z" fill="#aa7c11" stroke="#aa7c11" stroke-width="0.5" opacity="0.9"/>
+                <path d="M12 25 C5 32, 8 40, 18 36 C24 32, 20 25, 12 25 Z" fill="#27ae60" stroke="#1e7e34" stroke-width="0.5"/>
+                <path d="M65 52 C58 60, 62 68, 72 64 C78 60, 74 52, 65 52 Z" fill="#27ae60" stroke="#1e7e34" stroke-width="0.5"/>
+                <!-- Tiny golden rose bud at corner core -->
+                <circle cx="15" cy="15" r="5" fill="#e74c3c" stroke="#aa7c11" stroke-width="1"/>
+                <circle cx="12" cy="12" r="3" fill="#f1c40f"/>
+            </svg>
+            <!-- Bottom-Right Foliage -->
+            <svg class="theme-svg bottom-right-vine" viewBox="0 0 120 120" style="position: absolute; bottom: -2px; right: -2px; width: 140px; height: 140px; pointer-events: none; transform: rotate(180deg);">
+                <path d="M0 0 Q40 5, 60 35 T100 80" fill="none" stroke="#27ae60" stroke-width="2"/>
+                <path d="M0 0 Q10 40, 35 60 T80 100" fill="none" stroke="#aa7c11" stroke-width="1.5"/>
+                <path d="M25 12 C18 20, 22 28, 32 24 C38 20, 34 12, 25 12 Z" fill="#27ae60" stroke="#1e7e34" stroke-width="0.5"/>
+                <path d="M45 28 C38 35, 42 42, 52 38 C58 35, 54 28, 45 28 Z" fill="#aa7c11" stroke="#aa7c11" stroke-width="0.5" opacity="0.9"/>
+                <circle cx="15" cy="15" r="5" fill="#e74c3c" stroke="#aa7c11" stroke-width="1"/>
+            </svg>
+        </div>
+        `;
+    } else if (themeName === 'royal') {
+        return `
+        <!-- Royal Baroque Ornate Frames -->
+        <div class="theme-ornaments royal-decorations" style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; box-sizing:border-box;">
+            <!-- Top-Center Royal Crest -->
+            <svg class="theme-svg top-crest" viewBox="0 0 120 60" style="position: absolute; top: 8mm; left: 50%; transform: translateX(-50%); width: 120px; height: 60px; fill: none; stroke: #AA7C11; stroke-width: 1.8; pointer-events: none;">
+                <!-- Shield shape -->
+                <path d="M60 5 C75 12, 95 12, 100 25 C100 45, 60 58, 60 58 C60 58, 20 45, 20 25 C25 12, 45 12, 60 5 Z" fill="rgba(255,255,255,0.95)"/>
+                <!-- Fluer-de-lis / Crown Inside shield -->
+                <path d="M60 15 C60 15, 52 25, 42 22 C38 20, 45 35, 60 40 C75 35, 82 20, 78 22 C68 25, 60 15, 60 15 Z" fill="#AA7C11"/>
+                <path d="M60 12 L60 40" stroke="#ffffff" stroke-width="1"/>
+                <!-- Little stars around -->
+                <circle cx="15" cy="20" r="1.5" fill="#AA7C11"/>
+                <circle cx="105" cy="20" r="1.5" fill="#AA7C11"/>
+            </svg>
+            <!-- Baroque Top-Left Corner Scrollwork -->
+            <svg class="theme-svg top-left-baroque" viewBox="0 0 100 100" style="position: absolute; top: 4px; left: 4px; width: 90px; height: 90px; fill: none; stroke: #AA7C11; stroke-width: 1.8; pointer-events: none;">
+                <path d="M10 90 L10 10 L90 10" stroke-width="1"/>
+                <path d="M18 82 L18 18 L82 18" stroke-dasharray="1,2" stroke-width="0.8"/>
+                <!-- Scroll leaf ornaments -->
+                <path d="M10 10 C20 20, 30 10, 35 25 C25 35, 10 20, 10 10 Z" fill="#AA7C11" opacity="0.15"/>
+                <path d="M10 10 C10 30, 20 40, 25 50 C15 45, 5 30, 10 10 Z" fill="#AA7C11" opacity="0.15"/>
+                <circle cx="10" cy="10" r="4.5" fill="#AA7C11"/>
+                <circle cx="10" cy="10" r="2" fill="#ffffff"/>
+            </svg>
+            <!-- Baroque Bottom-Right Corner Scrollwork -->
+            <svg class="theme-svg bottom-right-baroque" viewBox="0 0 100 100" style="position: absolute; bottom: 4px; right: 4px; width: 90px; height: 90px; fill: none; stroke: #AA7C11; stroke-width: 1.8; pointer-events: none; transform: rotate(180deg);">
+                <path d="M10 90 L10 10 L90 10" stroke-width="1"/>
+                <path d="M18 82 L18 18 L82 18" stroke-dasharray="1,2" stroke-width="0.8"/>
+                <path d="M10 10 C20 20, 30 10, 35 25 C25 35, 10 20, 10 10 Z" fill="#AA7C11" opacity="0.15"/>
+                <circle cx="10" cy="10" r="4.5" fill="#AA7C11"/>
+                <circle cx="10" cy="10" r="2" fill="#ffffff"/>
+            </svg>
+        </div>
+        `;
+    } else if (themeName === 'minimal') {
+        return `
+        <!-- Minimal Art Deco Geometric Lines -->
+        <div class="theme-ornaments minimal-decorations" style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; box-sizing:border-box;">
+            <!-- Modern Intersecting Geometric Border Lines -->
+            <svg class="theme-svg minimal-lines" viewBox="0 0 200 200" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; fill: none; stroke: #AA7C11; stroke-width: 1; opacity: 0.9; pointer-events: none;">
+                <!-- Inner thin double border frame -->
+                <rect x="8" y="8" width="184" height="184" stroke-width="0.6"/>
+                <rect x="14" y="14" width="172" height="172" stroke-width="0.4" stroke-dasharray="3,1"/>
+                
+                <!-- Modern Art Deco Corner Elements -->
+                <!-- Top Left -->
+                <path d="M8 30 L30 8 M8 40 L40 8 M8 50 L50 8" stroke-width="0.5"/>
+                <!-- Top Right -->
+                <path d="M192 30 L170 8 M192 40 L160 8 M192 50 L150 8" stroke-width="0.5"/>
+                <!-- Bottom Left -->
+                <path d="M8 170 L30 192 M8 160 L40 192 M8 150 L50 192" stroke-width="0.5"/>
+                <!-- Bottom Right -->
+                <path d="M192 170 L170 192 M192 160 L160 192 M192 150 L150 192" stroke-width="0.5"/>
+                
+                <!-- Mid points diamond marks -->
+                <polygon points="100,5 103,8 100,11 97,8" fill="#AA7C11" stroke="none"/>
+                <polygon points="100,189 103,192 100,195 97,192" fill="#AA7C11" stroke="none"/>
+            </svg>
+        </div>
+        `;
+    } else if (themeName === 'firefly') {
+        return `
+        <!-- Magical Fireflies & Starry Night Constellations -->
+        <div class="theme-ornaments firefly-decorations" style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; box-sizing:border-box;">
+            <!-- Glowing Constellation Dots & Sparkles -->
+            <svg class="theme-svg magical-stars" viewBox="0 0 200 200" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; fill: none; stroke: #f1c40f; stroke-width: 0.8; opacity: 0.9; pointer-events: none;">
+                <!-- Glowing star clusters top-left -->
+                <circle cx="25" cy="25" r="3" fill="#f1c40f" style="filter: drop-shadow(0 0 3px #f1c40f);"/>
+                <line x1="25" y1="18" x2="25" y2="32" stroke-width="0.75"/>
+                <line x1="18" y1="25" x2="32" y2="25" stroke-width="0.75"/>
+                
+                <!-- Glowing star clusters bottom-right -->
+                <circle cx="175" cy="175" r="3" fill="#f1c40f" style="filter: drop-shadow(0 0 3px #f1c40f);"/>
+                <line x1="175" y1="168" x2="175" y2="182" stroke-width="0.75"/>
+                <line x1="168" y1="175" x2="182" y2="175" stroke-width="0.75"/>
+                
+                <!-- Constellation connecting lines -->
+                <path d="M25 25 L50 15 L70 30 L100 10 L130 35 L175 25" stroke="rgba(241, 196, 15, 0.15)" stroke-width="0.8"/>
+                <path d="M25 175 L60 185 L90 160 L120 180 L150 165 L175 175" stroke="rgba(241, 196, 15, 0.15)" stroke-width="0.8"/>
+                
+                <!-- Bioluminescent firefly spots at corners -->
+                <circle cx="48" cy="18" r="1.5" fill="#f1c40f"/>
+                <circle cx="140" cy="30" r="2" fill="#ffd700"/>
+                <circle cx="15" cy="120" r="1.2" fill="#f1c40f"/>
+                <circle cx="185" cy="90" r="1.8" fill="#ffd700"/>
+                <circle cx="95" cy="185" r="2.5" fill="#f1c40f" style="filter: drop-shadow(0 0 2px #f1c40f);"/>
+            </svg>
+        </div>
+        `;
+    }
+    return '';
+}
+
+// Global variable to store active target keepsake for printing
+let currentPrintMemoryId = null;
+
+// Initialize printing choices in appState if not defined
+appState.selectedPrintTheme = 'butterfly';
+appState.selectedPrintSize = 'a4';
+appState.selectedPrintOrientation = 'landscape';
+
+function showPrintSizeModal(memoryId = null) {
+    currentPrintMemoryId = memoryId;
+    
+    // Reset selection styles in modal to default (A4 and landscape)
+    appState.selectedPrintSize = 'a4';
+    appState.selectedPrintOrientation = 'landscape';
+    
+    document.querySelectorAll('.size-select-card').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.orientation-select-card').forEach(c => c.classList.remove('active'));
+    
+    const defaultSizeBtn = document.getElementById('size-btn-a4');
+    if (defaultSizeBtn) defaultSizeBtn.classList.add('active');
+    
+    const defaultOrientationBtn = document.getElementById('orientation-btn-landscape');
+    if (defaultOrientationBtn) {
+        defaultOrientationBtn.classList.add('active');
+        defaultOrientationBtn.style.borderColor = 'var(--color-gold-dark)';
+        defaultOrientationBtn.style.background = 'rgba(214,175,55,0.03)';
+        defaultOrientationBtn.querySelector('strong').style.color = 'var(--color-gold-dark)';
+    }
+    
+    const portraitOrientationBtn = document.getElementById('orientation-btn-portrait');
+    if (portraitOrientationBtn) {
+        portraitOrientationBtn.style.borderColor = 'rgba(74, 59, 50, 0.15)';
+        portraitOrientationBtn.style.background = 'transparent';
+        portraitOrientationBtn.querySelector('strong').style.color = 'var(--color-text-brown)';
+    }
+    
+    const modal = document.getElementById('print-size-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+}
+
+function closePrintSizeModal() {
+    const modal = document.getElementById('print-size-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+function selectPrintOrientation(orientationName, element) {
+    appState.selectedPrintOrientation = orientationName;
+    document.querySelectorAll('.orientation-select-card').forEach(c => c.classList.remove('active'));
+    if (element) {
+        element.classList.add('active');
+    }
+    document.querySelectorAll('.orientation-select-card').forEach(card => {
+        if (card.classList.contains('active')) {
+            card.style.borderColor = 'var(--color-gold-dark)';
+            card.style.background = 'rgba(214,175,55,0.03)';
+            card.querySelector('strong').style.color = 'var(--color-gold-dark)';
+        } else {
+            card.style.borderColor = 'rgba(74, 59, 50, 0.15)';
+            card.style.background = 'transparent';
+            card.querySelector('strong').style.color = 'var(--color-text-brown)';
+        }
+    });
+}
+
+function selectPrintTheme(themeName, element) {
+    appState.selectedPrintTheme = themeName;
+    document.querySelectorAll('.theme-select-card').forEach(c => c.classList.remove('active'));
+    if (element) {
+        element.classList.add('active');
+    }
+}
+
+function selectPrintSize(sizeName, element) {
+    appState.selectedPrintSize = sizeName;
+    document.querySelectorAll('.size-select-card').forEach(c => c.classList.remove('active'));
+    if (element) {
+        element.classList.add('active');
+    }
+}
+
+async function executeKeepsakePrint() {
+    await confirmPrintSize(appState.selectedPrintSize);
+}
+
+async function confirmPrintSize(size) {
+    closePrintSizeModal();
+    
+    // Remove existing print size and orientation classes from body
+    document.body.classList.remove('print-size-a4', 'print-size-a5', 'print-orientation-landscape', 'print-orientation-portrait');
+    
+    // Add the selected size and orientation classes
+    document.body.classList.add(`print-size-${size}`);
+    document.body.classList.add(`print-orientation-${appState.selectedPrintOrientation || 'landscape'}`);
+    
+    // Inject dynamic @page size style to enforce correct paper format in print dialog
+    let printStyleNode = document.getElementById('dynamic-print-page-style');
+    if (!printStyleNode) {
+        printStyleNode = document.createElement('style');
+        printStyleNode.id = 'dynamic-print-page-style';
+        document.head.appendChild(printStyleNode);
+    }
+    
+    const orientation = appState.selectedPrintOrientation || 'landscape';
+    if (size === 'a4') {
+        printStyleNode.innerHTML = `@media print { @page { size: A4 ${orientation}; margin: 0; } }`;
+    } else if (size === 'a5') {
+        printStyleNode.innerHTML = `@media print { @page { size: A5 ${orientation}; margin: 0; } }`;
+    }
+    
+    // Execute the actual printing
+    await triggerCardPrinting(currentPrintMemoryId);
 }
 
 // Setup active reminder UI text and slider based on current state
@@ -1390,7 +1907,7 @@ function playArchiveAudio(audioUrl, btn) {
 
 // Print specific card from the archive grid
 function printSpecificMemory(memoryId) {
-    triggerCardPrinting(memoryId);
+    showPrintSizeModal(memoryId);
 }
 
 // Delete keepsake from archive grid
@@ -2359,29 +2876,29 @@ async function downloadMemoryPDF(memoryId) {
         return;
     }
     
-    // Compile print frame structure (same as print)
+    // Check if there is a valid captured or uploaded photo in the memory
+    const hasValidPhoto = memory.photoUrl && 
+                          memory.photoUrl !== 'default_keepsake.png' && 
+                          memory.photoUrl.trim() !== '' && 
+                          !memory.photoUrl.startsWith('default_keepsake');
+
+    // Compile print frame structure (simplified blank centered for preprinted sheets overprint, with QR code)
     const card = document.createElement('div');
-    card.className = 'thiep-card';
+    card.className = `thiep-card theme-blank ${hasValidPhoto ? 'has-photo' : 'no-photo'}`;
     
     card.innerHTML = `
-        <div class="thiep-header">
-            <div class="thiep-title">Lời Chúc 50 Năm</div>
-            <div class="thiep-tagline">"Ký ức gia tộc là di sản ngàn đời"</div>
-        </div>
-        <div class="thiep-body">
+        <div class="thiep-body ${hasValidPhoto ? 'layout-split' : 'layout-full'}">
+            ${hasValidPhoto ? `
             <div class="thiep-image-box">
-                <img src="${memory.photoUrl}" alt="Family print frame" class="thiep-img" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=800&q=80';">
+                <img src="${memory.photoUrl}" alt="Family print frame" class="thiep-img">
             </div>
+            ` : ''}
             <div class="thiep-message-box">
                 <div class="thiep-message-text">"${memory.text}"</div>
             </div>
         </div>
         <div class="thiep-bottom-row">
-            <div class="thiep-meta-info">
-                <strong>Gia đình:</strong> ${appState.currentUser ? appState.currentUser.familyName : "Dòng họ Nguyễn An"}<br>
-                <strong>Ngày gieo mầm:</strong> ${memory.date} lúc ${memory.time}<br>
-                <strong>Bảo lưu truyền đời bởi:</strong> Lời Chúc 50 Năm Capsule
-            </div>
+            <div class="thiep-meta-info" style="display: none;"></div>
             <div class="thiep-qr-box" id="thiep-qr-pdf-node"></div>
         </div>
     `;
@@ -2408,13 +2925,13 @@ async function downloadMemoryPDF(memoryId) {
     
     await waitForImagesToLoad(printableNode);
     
-    // Convert to PDF using html2pdf.js
+    // Convert to PDF using html2pdf.js - configured for borderless centered landscape overprint
     const opt = {
-        margin:       10,
-        filename:     `loichuc50nam_thiep_${memory.id}.pdf`,
+        margin:       0,
+        filename:     `loichuc50nam_khung_chu_${memory.id}.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
     };
     
     // Trigger conversion and download
