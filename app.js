@@ -75,16 +75,9 @@ let appState = {
     musicIsPlaying: false
 };
 
-// --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
     // Generate background floating particles
     initAmbientParticles();
-    
-    // Load local storage data
-    loadFromLocalStorage();
-    
-    // Setup login check
-    checkSession();
     
     // Setup Speech Recognition
     setupSpeechRecognition();
@@ -99,12 +92,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // Bind slider values
     updateFutureSliderText(1);
     
-    // Setup active reminder UI from localStorage
-    updateReminderUI();
-    
     // Set custom click triggers for range labels
     document.querySelectorAll('.slider-lbl').forEach((lbl, idx) => {
         lbl.addEventListener('click', () => setSliderValue(idx + 1));
+    });
+    
+    // Initialize IndexedDB, migrate data, and load small sync configs
+    initIndexedDB(() => {
+        loadAllFromIndexedDB(() => {
+            migrateLocalStorageToIndexedDB(() => {
+                // Setup login check and reminder UI after loading completes
+                loadFromLocalStorage();
+                checkSession();
+                updateReminderUI();
+                console.log("Initialization sequence completed.");
+            });
+        });
     });
     
     // Setup Audio error handling to prevent silent network failure lag
@@ -131,85 +134,209 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// --- LOCAL STORAGE HELPERS ---
+// --- INDEXEDDB HELPER FOR LARGE IMAGE/AUDIO/VIDEO KEEPSAKES ---
+const DB_NAME = 'loichuc50nam_db';
+const DB_VERSION = 1;
+const MEMORIES_STORE = 'memories';
+const ORBS_STORE = 'treeOrbs';
+
+let db = null;
+
+function initIndexedDB(callback) {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    
+    request.onupgradeneeded = function(e) {
+        const database = e.target.result;
+        if (!database.objectStoreNames.contains(MEMORIES_STORE)) {
+            database.createObjectStore(MEMORIES_STORE, { keyPath: 'id' });
+        }
+        if (!database.objectStoreNames.contains(ORBS_STORE)) {
+            database.createObjectStore(ORBS_STORE, { keyPath: 'id' });
+        }
+    };
+    
+    request.onsuccess = function(e) {
+        db = e.target.result;
+        console.log("IndexedDB initialized successfully!");
+        if (callback) callback();
+    };
+    
+    request.onerror = function(e) {
+        console.error("IndexedDB failed to open:", e.target.error);
+        if (callback) callback(); // Fallback to memory
+    };
+}
+
+function saveMemoriesToIndexedDB(memoriesList) {
+    if (!db) return;
+    try {
+        const tx = db.transaction(MEMORIES_STORE, 'readwrite');
+        const store = tx.objectStore(MEMORIES_STORE);
+        store.clear().onsuccess = function() {
+            memoriesList.forEach(memory => {
+                store.put(memory);
+            });
+        };
+    } catch (e) {
+        console.error("Error writing memories to IndexedDB:", e);
+    }
+}
+
+function saveOrbsToIndexedDB(orbsList) {
+    if (!db) return;
+    try {
+        const tx = db.transaction(ORBS_STORE, 'readwrite');
+        const store = tx.objectStore(ORBS_STORE);
+        store.clear().onsuccess = function() {
+            orbsList.forEach(orb => {
+                store.put(orb);
+            });
+        };
+    } catch (e) {
+        console.error("Error writing orbs to IndexedDB:", e);
+    }
+}
+
+function loadAllFromIndexedDB(onComplete) {
+    if (!db) {
+        if (onComplete) onComplete();
+        return;
+    }
+    
+    try {
+        const memoriesTx = db.transaction(MEMORIES_STORE, 'readonly');
+        const memoriesStore = memoriesTx.objectStore(MEMORIES_STORE);
+        const memoriesRequest = memoriesStore.getAll();
+        
+        memoriesRequest.onsuccess = function() {
+            const loadedMemories = memoriesRequest.result || [];
+            if (loadedMemories.length > 0) {
+                // Migrate legacy Unsplash photos if any
+                appState.memories = loadedMemories.map(m => {
+                    if (m.photoUrl && (m.photoUrl.includes('photo-1464998857633-50e59fbf2fe6') || m.photoUrl.includes('photo-1511895426328-dc8714191300'))) {
+                        m.photoUrl = 'default_keepsake.png';
+                    }
+                    return m;
+                });
+                console.log(`Loaded ${loadedMemories.length} memories from IndexedDB.`);
+            }
+            
+            // Next, load Orbs
+            const orbsTx = db.transaction(ORBS_STORE, 'readonly');
+            const orbsStore = orbsTx.objectStore(ORBS_STORE);
+            const orbsRequest = orbsStore.getAll();
+            
+            orbsRequest.onsuccess = function() {
+                const loadedOrbs = orbsRequest.result || [];
+                if (loadedOrbs.length > 0) {
+                    appState.treeOrbs = loadedOrbs.map(orb => {
+                        if (orb.images) {
+                            orb.images = orb.images.map(img => {
+                                if (img.base64 && (img.base64.includes('photo-1464998857633-50e59fbf2fe6') || img.base64.includes('photo-1511895426328-dc8714191300'))) {
+                                    img.base64 = 'default_keepsake.png';
+                                }
+                                return img;
+                            });
+                        }
+                        return orb;
+                    });
+                    console.log(`Loaded ${loadedOrbs.length} tree orbs from IndexedDB.`);
+                } else {
+                    // Pre-populate 3 visual orbs for demonstration
+                    appState.treeOrbs = [
+                        {
+                            id: 'orb_demo_1',
+                            dateString: '12/05/2026',
+                            x: 0.35, y: 0.38,
+                            size: 8,
+                            images: [
+                                { base64: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=400&q=80', timeString: '14:23' }
+                            ]
+                        },
+                        {
+                            id: 'orb_demo_2',
+                            dateString: '18/05/2026',
+                            x: 0.58, y: 0.28,
+                            size: 9,
+                            images: [
+                                { base64: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=400&q=80', timeString: '09:15' },
+                                { base64: 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=400&q=80', timeString: '18:40' }
+                            ]
+                        }
+                    ];
+                }
+                if (onComplete) onComplete();
+            };
+            
+            orbsRequest.onerror = function() {
+                if (onComplete) onComplete();
+            };
+        };
+        
+        memoriesRequest.onerror = function() {
+            if (onComplete) onComplete();
+        };
+    } catch (err) {
+        console.error("IndexedDB read transaction failed:", err);
+        if (onComplete) onComplete();
+    }
+}
+
+function migrateLocalStorageToIndexedDB(onDone) {
+    const savedMemories = localStorage.getItem('loichuc50nam_memories');
+    const savedOrbs = localStorage.getItem('loichuc50nam_treeOrbs');
+    
+    if (savedMemories || savedOrbs) {
+        console.log("Migrating legacy LocalStorage keepsakes to IndexedDB...");
+        let memories = [];
+        let orbs = [];
+        
+        try {
+            if (savedMemories) memories = JSON.parse(savedMemories);
+            if (savedOrbs) orbs = JSON.parse(savedOrbs);
+        } catch (e) {
+            console.error("Failed to parse legacy localStorage data:", e);
+        }
+        
+        if (memories.length > 0) {
+            appState.memories = memories;
+            saveMemoriesToIndexedDB(memories);
+        }
+        if (orbs.length > 0) {
+            appState.treeOrbs = orbs;
+            saveOrbsToIndexedDB(orbs);
+        }
+        
+        // Clean up heavy keys from LocalStorage
+        localStorage.removeItem('loichuc50nam_memories');
+        localStorage.removeItem('loichuc50nam_treeOrbs');
+        console.log("Migration complete. Heavy LocalStorage keys removed.");
+    }
+    if (onDone) onDone();
+}
+
+// --- LOCAL STORAGE HELPERS (FOR METADATA ONLY) ---
 function saveToLocalStorage() {
-    localStorage.setItem('loichuc50nam_memories', JSON.stringify(appState.memories));
-    localStorage.setItem('loichuc50nam_treeOrbs', JSON.stringify(appState.treeOrbs));
-    if (appState.currentUser) {
-        localStorage.setItem('loichuc50nam_user', JSON.stringify(appState.currentUser));
+    try {
+        if (appState.currentUser) {
+            localStorage.setItem('loichuc50nam_user', JSON.stringify(appState.currentUser));
+        }
+        if (appState.activeReminderOrbId) {
+            localStorage.setItem('loichuc50nam_activeReminderOrbId', appState.activeReminderOrbId);
+        } else {
+            localStorage.removeItem('loichuc50nam_activeReminderOrbId');
+        }
+        localStorage.setItem('loichuc50nam_activeReminderInterval', appState.activeReminderInterval);
+        
+        // Save heavy items asynchronously to IndexedDB
+        saveMemoriesToIndexedDB(appState.memories);
+        saveOrbsToIndexedDB(appState.treeOrbs);
+    } catch (err) {
+        console.warn("Không thể lưu cấu hình cục bộ:", err);
     }
-    if (appState.activeReminderOrbId) {
-        localStorage.setItem('loichuc50nam_activeReminderOrbId', appState.activeReminderOrbId);
-    } else {
-        localStorage.removeItem('loichuc50nam_activeReminderOrbId');
-    }
-    localStorage.setItem('loichuc50nam_activeReminderInterval', appState.activeReminderInterval);
 }
 
 function loadFromLocalStorage() {
-    const savedMemories = localStorage.getItem('loichuc50nam_memories');
-    if (savedMemories) {
-        let memories = JSON.parse(savedMemories);
-        let migrated = false;
-        // Migration: automatically upgrade old camera placeholder image to the custom brand-aligned keepsake graphic
-        memories = memories.map(m => {
-            if (m.photoUrl && (m.photoUrl.includes('photo-1464998857633-50e59fbf2fe6') || m.photoUrl.includes('photo-1511895426328-dc8714191300'))) {
-                m.photoUrl = 'default_keepsake.png';
-                migrated = true;
-            }
-            return m;
-        });
-        appState.memories = memories;
-        if (migrated) {
-            localStorage.setItem('loichuc50nam_memories', JSON.stringify(appState.memories));
-        }
-    }
-    
-    const savedOrbs = localStorage.getItem('loichuc50nam_treeOrbs');
-    if (savedOrbs) {
-        let orbs = JSON.parse(savedOrbs);
-        let migratedOrbs = false;
-        orbs = orbs.map(orb => {
-            if (orb.images) {
-                orb.images = orb.images.map(img => {
-                    if (img.base64 && (img.base64.includes('photo-1464998857633-50e59fbf2fe6') || img.base64.includes('photo-1511895426328-dc8714191300'))) {
-                        img.base64 = 'default_keepsake.png';
-                        migratedOrbs = true;
-                    }
-                    return img;
-                });
-            }
-            return orb;
-        });
-        appState.treeOrbs = orbs;
-        if (migratedOrbs) {
-            localStorage.setItem('loichuc50nam_treeOrbs', JSON.stringify(appState.treeOrbs));
-        }
-    } else {
-        // Pre-populate 3 visual orbs for demonstration
-        appState.treeOrbs = [
-            {
-                id: 'orb_demo_1',
-                dateString: '12/05/2026',
-                x: 0.35, y: 0.38,
-                size: 8,
-                images: [
-                    { base64: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=400&q=80', timeString: '14:23' }
-                ]
-            },
-            {
-                id: 'orb_demo_2',
-                dateString: '18/05/2026',
-                x: 0.58, y: 0.28,
-                size: 9,
-                images: [
-                    { base64: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=400&q=80', timeString: '09:15' },
-                    { base64: 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=400&q=80', timeString: '18:40' }
-                ]
-            }
-        ];
-    }
-    
     const savedReminderOrbId = localStorage.getItem('loichuc50nam_activeReminderOrbId');
     if (savedReminderOrbId) appState.activeReminderOrbId = savedReminderOrbId;
     
