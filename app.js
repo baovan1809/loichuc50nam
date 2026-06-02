@@ -1834,6 +1834,14 @@ function initMemoryTreeCanvas() {
     // Mouse hover handler on specific memory fruit orbs
     canvas.addEventListener('mousemove', handleTreeCanvasMouseMove);
     canvas.addEventListener('click', handleTreeCanvasClick);
+    
+    // Touch event support for instant tap response on mobile devices
+    canvas.addEventListener('touchstart', (e) => {
+        if (e.touches && e.touches.length > 0) {
+            e.preventDefault();
+            handleTreeCanvasClick(e.touches[0]);
+        }
+    }, { passive: false });
 }
 
 function resizeTreeCanvas() {

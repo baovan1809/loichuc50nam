@@ -2855,6 +2855,124 @@ h1, h2, h3, h4, .logo-text, .message-typography {
     /* Offset main view padding to prevent overlap with the bottom tab bar */
     .view-section {
         padding-bottom: 80px;
+        padding-top: 68px !important;
+    }
+
+    /* Landing Hero Mobile Optimization */
+    .landing-hero {
+        flex-direction: column-reverse !important;
+        padding: 20px 16px !important;
+        gap: 24px !important;
+        min-height: auto !important;
+        text-align: center !important;
+    }
+    .hero-content {
+        max-width: 100% !important;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .hero-title {
+        font-size: 2.2rem !important;
+        line-height: 1.25 !important;
+        margin-bottom: 12px !important;
+    }
+    .hero-subtitle {
+        font-size: 0.95rem !important;
+        max-width: 100% !important;
+        margin-bottom: 24px !important;
+        line-height: 1.5 !important;
+    }
+    .capsule-visual-container {
+        width: 260px !important;
+        height: 260px !important;
+    }
+    .capsule-glow-aura {
+        width: 220px !important;
+        height: 220px !important;
+    }
+    .hero-visual {
+        margin: 0 auto !important;
+    }
+
+    /* Landing Section & Steps */
+    .landing-section {
+        padding: 40px 16px !important;
+    }
+    .section-title {
+        font-size: 1.7rem !important;
+        margin-bottom: 30px !important;
+    }
+    .steps-grid {
+        flex-direction: column !important;
+        gap: 16px !important;
+    }
+    .step-card {
+        padding: 20px !important;
+    }
+
+    /* Why Section */
+    .why-wrapper {
+        flex-direction: column !important;
+        padding: 30px 16px !important;
+        gap: 24px !important;
+    }
+    .why-metric {
+        justify-content: space-around !important;
+        width: 100% !important;
+        gap: 20px !important;
+    }
+    .glass-photo-frame {
+        max-width: 100% !important;
+        transform: none !important;
+    }
+
+    /* Modal Cards responsive sizing */
+    .modal-card {
+        width: 95% !important;
+        max-height: 92vh !important;
+        margin: auto !important;
+        border-radius: 12px !important;
+    }
+    .modal-body {
+        padding: 16px !important;
+    }
+    .camera-stream-wrapper {
+        height: 220px !important; /* Limit camera height to fit mobile viewport */
+    }
+    .camera-actions {
+        margin-top: 12px !important;
+    }
+
+    /* Keepsake Review and Gallery Card Layout Stacking */
+    .preview-center-card {
+        flex-direction: column !important;
+        padding: 16px !important;
+        gap: 20px !important;
+    }
+    .preview-left-side, .preview-right-side {
+        width: 100% !important;
+        flex: none !important;
+    }
+    .preview-main-img {
+        height: 180px !important;
+    }
+
+    /* Header adjustments */
+    .main-header {
+        padding: 0 16px !important;
+        height: 60px !important;
+    }
+    .logo-text {
+        font-size: 1.15rem !important;
+    }
+
+    /* Disable hover tooltips for touch screens to prevent sticky overlays */
+    @media (hover: none) {
+        .tooltip::after {
+            display: none !important;
+            content: none !important;
+        }
     }
 }
 
