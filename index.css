@@ -2944,6 +2944,25 @@ h1, h2, h3, h4, .logo-text, .message-typography {
         margin-top: 12px !important;
     }
 
+    /* Saved main content layout stacking */
+    .saved-main-content {
+        flex-direction: column !important;
+        gap: 24px !important;
+    }
+    .saved-sidebar {
+        width: 100% !important;
+        flex: none !important;
+    }
+    .bottom-action-buttons-row {
+        flex-direction: column !important;
+        gap: 12px !important;
+        margin-bottom: 24px !important;
+    }
+    .action-card-btn {
+        width: 100% !important;
+        flex: none !important;
+    }
+
     /* Keepsake Review and Gallery Card Layout Stacking */
     .preview-center-card {
         flex-direction: column !important;
@@ -2956,6 +2975,78 @@ h1, h2, h3, h4, .logo-text, .message-typography {
     }
     .preview-main-img {
         height: 180px !important;
+    }
+
+    /* Tree View Mobile Offsets */
+    .tree-header-container {
+        position: absolute !important;
+        top: 12px !important;
+        left: 16px !important;
+        right: 16px !important;
+        text-align: center !important;
+        z-index: 10 !important;
+    }
+    .tree-main-title {
+        font-size: 1.6rem !important;
+        text-align: center !important;
+    }
+    .tree-subtitle {
+        font-size: 0.8rem !important;
+        text-align: center !important;
+        margin-top: 4px !important;
+    }
+    .tree-control-bar {
+        bottom: 80px !important;
+        width: 90% !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        justify-content: space-around !important;
+        padding: 6px 16px !important;
+        gap: 8px !important;
+        z-index: 99 !important;
+    }
+    .ambient-music-widget {
+        top: 80px !important;
+        bottom: auto !important;
+        right: 16px !important;
+        left: auto !important;
+        z-index: 99 !important;
+    }
+    
+    /* Center and styling for Future Gazing Panel on mobile */
+    .future-gazing-panel {
+        display: none !important;
+    }
+    .future-gazing-panel.active-panel {
+        display: block !important;
+        position: fixed !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        width: 90% !important;
+        max-width: 320px !important;
+        z-index: 10001 !important;
+        background-color: rgba(5, 10, 24, 0.96) !important;
+        box-shadow: 0 0 30px rgba(0,0,0,0.9) !important;
+        border: 1px solid rgba(214, 175, 55, 0.4) !important;
+    }
+    .panel-close-btn {
+        display: block !important;
+        position: absolute !important;
+        top: 8px !important;
+        right: 12px !important;
+        background: none !important;
+        border: none !important;
+        color: #fff !important;
+        font-size: 1.6rem !important;
+        cursor: pointer !important;
+        line-height: 1 !important;
+    }
+
+    /* Hide background control elements when Lời nhắn panel overlay is active */
+    .future-gazing-panel.active-panel ~ .tree-control-bar,
+    .future-gazing-panel.active-panel ~ .ambient-music-widget {
+        display: none !important;
     }
 
     /* Header adjustments */
