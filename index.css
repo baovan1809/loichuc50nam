@@ -2460,21 +2460,7 @@ h1, h2, h3, h4, .logo-text, .message-typography {
     }
 
     .thiep-qr-box {
-        display: block !important;
-        background: #ffffff !important;
-        border: 1px solid #4a3b32 !important;
-        padding: 4px !important;
-        box-sizing: border-box !important;
-    }
-
-    body.print-size-a4 .thiep-qr-box {
-        width: 80px !important;
-        height: 80px !important;
-    }
-
-    body.print-size-a5 .thiep-qr-box {
-        width: 60px !important;
-        height: 60px !important;
+        display: none !important;
     }
 
     .thiep-qr-box img,
@@ -2521,13 +2507,21 @@ h1, h2, h3, h4, .logo-text, .message-typography {
     body.print-orientation-portrait.print-size-a4 .thiep-body {
         width: 140mm !important;
         height: 230mm !important;
-        gap: 30px !important;
+        gap: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        align-items: center !important;
     }
 
     body.print-orientation-portrait.print-size-a5 .thiep-body {
         width: 95mm !important;
         height: 160mm !important;
-        gap: 20px !important;
+        gap: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        align-items: center !important;
     }
 
     /* Message typography centering & styling */
@@ -2541,9 +2535,18 @@ h1, h2, h3, h4, .logo-text, .message-typography {
         height: 100% !important;
     }
 
-    body.print-orientation-portrait .thiep-message-box {
+    body.print-orientation-portrait.print-size-a4 .thiep-message-box {
         width: 100% !important;
         height: auto !important;
+        flex: none !important;
+        margin-top: 10mm !important;
+    }
+
+    body.print-orientation-portrait.print-size-a5 .thiep-message-box {
+        width: 100% !important;
+        height: auto !important;
+        flex: none !important;
+        margin-top: 6mm !important;
     }
 
     .thiep-message-text {
@@ -2553,10 +2556,12 @@ h1, h2, h3, h4, .logo-text, .message-typography {
         color: #111111 !important;
         font-style: italic !important;
         word-wrap: break-word !important;
+        text-align: center !important;
+        width: 100% !important;
     }
 
     body.print-size-a5 .thiep-message-text {
-        font-size: 1.15rem !important;
+        font-size: 1.05rem !important;
         line-height: 1.5 !important;
     }
 
@@ -2573,13 +2578,22 @@ h1, h2, h3, h4, .logo-text, .message-typography {
         height: 100% !important;
     }
 
-    body.print-orientation-portrait .thiep-image-box {
+    body.print-orientation-portrait.print-size-a4 .thiep-image-box {
         width: 100% !important;
-        height: 110mm !important;
+        height: 75mm !important;
+        flex: none !important;
+        margin: 0 auto !important;
+        border: none !important;
+        box-sizing: border-box !important;
     }
 
     body.print-orientation-portrait.print-size-a5 .thiep-image-box {
-        height: 75mm !important;
+        width: 68mm !important;
+        height: 51mm !important;
+        flex: none !important;
+        margin: 0 auto !important;
+        border: none !important;
+        box-sizing: border-box !important;
     }
 
     .thiep-img {
@@ -3003,13 +3017,7 @@ h1, h2, h3, h4, .logo-text, .message-typography {
 }
 
 .printable-thiep-container .thiep-qr-box {
-    display: block !important;
-    background: #ffffff !important;
-    border: 1px solid #4a3b32 !important;
-    padding: 4px !important;
-    width: 80px !important;
-    height: 80px !important;
-    box-sizing: border-box !important;
+    display: none !important;
 }
 
 .printable-thiep-container .thiep-qr-box img,
