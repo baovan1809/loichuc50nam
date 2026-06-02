@@ -540,6 +540,7 @@
 
             <!-- Floating Glassmorphism Lời Nhắn Tương Lai Panel on the Right -->
             <div class="future-gazing-panel">
+                <button class="panel-close-btn" onclick="closeFuturePanel()">×</button>
                 <h3 class="future-title">Lời Nhắn Tương Lai</h3>
                 
                 <div class="future-time-selector">
@@ -649,8 +650,8 @@
     <!-- ----------------------------------------- -->
 
     <!-- 1. CAMERA / CAPTURE MODAL -->
-    <div id="camera-modal" class="modal-overlay hidden">
-        <div class="modal-card luxury-border glass-panel">
+    <div id="camera-modal" class="modal-overlay hidden" onclick="if(event.target === this) closeCameraModal()">
+        <div class="modal-card luxury-border glass-panel" onclick="event.stopPropagation()">
             <div class="modal-header">
                 <h3 class="modal-title">Ghi hình gia đình</h3>
                 <button class="modal-close-btn" onclick="closeCameraModal()">
@@ -678,8 +679,8 @@
     </div>
 
     <!-- 2. VIDEO RECORDING MODAL -->
-    <div id="video-modal" class="modal-overlay hidden">
-        <div class="modal-card luxury-border glass-panel">
+    <div id="video-modal" class="modal-overlay hidden" onclick="if(event.target === this) closeVideoModal()">
+        <div class="modal-card luxury-border glass-panel" onclick="event.stopPropagation()">
             <div class="modal-header">
                 <h3 class="modal-title">Quay phim kỷ niệm</h3>
                 <button class="modal-close-btn" onclick="closeVideoModal()">
@@ -707,8 +708,8 @@
     </div>
 
     <!-- 3. TEXT EDITOR MODAL -->
-    <div id="text-editor-modal" class="modal-overlay hidden">
-        <div class="modal-card luxury-border glass-panel">
+    <div id="text-editor-modal" class="modal-overlay hidden" onclick="if(event.target === this) closeTextEditorModal()">
+        <div class="modal-card luxury-border glass-panel" onclick="event.stopPropagation()">
             <div class="modal-header">
                 <h3 class="modal-title">Viết thư gửi mai sau</h3>
                 <button class="modal-close-btn" onclick="closeTextEditorModal()">
@@ -754,8 +755,8 @@
     </div>
 
     <!-- 5. TREE IMAGE UPLOADER MODAL (GIEO MẦM) -->
-    <div id="tree-uploader-modal" class="modal-overlay hidden">
-        <div class="modal-card luxury-border glass-panel">
+    <div id="tree-uploader-modal" class="modal-overlay hidden" onclick="if(event.target === this) closeTreeUploader()">
+        <div class="modal-card luxury-border glass-panel" onclick="event.stopPropagation()">
             <div class="modal-header">
                 <h3 class="modal-title">Gieo mầm Quả Ký Ức mới</h3>
                 <button class="modal-close-btn" onclick="closeTreeUploader()">
@@ -772,7 +773,7 @@
                     <p class="upload-subtext">Hỗ trợ các định dạng PNG, JPG, JPEG. Quả mới sẽ kết hạt tinh khôi rực sáng lấp lánh như vệt đom đóm trắng trong tán lá hồng.</p>
                     <input type="file" id="tree-file-input" accept="image/*" class="hidden" multiple onchange="handleTreeFilesUpload(this.files)">
                 </div>
-                <div class="progress-bar-container hidden" id="upload-progress-container">
+                <div class="upload-progress-container progress-bar-container hidden" id="upload-progress-container">
                     <div class="progress-fill" id="upload-progress-bar"></div>
                 </div>
             </div>
@@ -780,8 +781,8 @@
     </div>
 
     <!-- 6. MEMORY ORBS GALLERY MODAL (POLAROID VIEW) -->
-    <div id="orbs-gallery-modal" class="modal-overlay hidden">
-        <div class="modal-card large-modal luxury-border glass-panel">
+    <div id="orbs-gallery-modal" class="modal-overlay hidden" onclick="if(event.target === this) closeOrbsGallery()">
+        <div class="modal-card large-modal luxury-border glass-panel" onclick="event.stopPropagation()">
             <div class="modal-header">
                 <h3 class="modal-title" id="gallery-orb-title">Danh mục quả ký ức ngày hôm nay</h3>
                 <button class="modal-close-btn" onclick="closeOrbsGallery()">
