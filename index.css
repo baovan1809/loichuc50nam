@@ -2510,7 +2510,7 @@ h1, h2, h3, h4, .logo-text, .message-typography {
         gap: 0 !important;
         display: flex !important;
         flex-direction: column !important;
-        justify-content: center !important;
+        justify-content: flex-start !important; /* Push elements to the upper half */
         align-items: center !important;
     }
 
@@ -2520,7 +2520,7 @@ h1, h2, h3, h4, .logo-text, .message-typography {
         gap: 0 !important;
         display: flex !important;
         flex-direction: column !important;
-        justify-content: center !important;
+        justify-content: flex-start !important; /* Push elements to the upper half */
         align-items: center !important;
     }
 
@@ -2579,10 +2579,10 @@ h1, h2, h3, h4, .logo-text, .message-typography {
     }
 
     body.print-orientation-portrait.print-size-a4 .thiep-image-box {
-        width: 100% !important;
+        width: 100mm !important;
         height: 75mm !important;
         flex: none !important;
-        margin: 0 auto !important;
+        margin: 15mm auto 0 auto !important; /* Calibrated 15mm top margin */
         border: none !important;
         box-sizing: border-box !important;
     }
@@ -2591,7 +2591,7 @@ h1, h2, h3, h4, .logo-text, .message-typography {
         width: 68mm !important;
         height: 51mm !important;
         flex: none !important;
-        margin: 0 auto !important;
+        margin: 10mm auto 0 auto !important; /* Highly calibrated A5 10mm top margin */
         border: none !important;
         box-sizing: border-box !important;
     }
@@ -2605,12 +2605,23 @@ h1, h2, h3, h4, .logo-text, .message-typography {
 
     /* Full layout centering when photo is absent */
     .thiep-body.layout-full {
-        display: block !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
     }
 
     .thiep-body.layout-full .thiep-message-box {
         width: 100% !important;
-        height: 100% !important;
+        height: auto !important;
+    }
+
+    body.print-orientation-portrait.print-size-a4 .thiep-body.layout-full .thiep-message-box {
+        margin-top: 55mm !important; /* Position text in upper-middle of card for A4 */
+    }
+
+    body.print-orientation-portrait.print-size-a5 .thiep-body.layout-full .thiep-message-box {
+        margin-top: 38mm !important; /* Calibrated upper-middle position for A5 text */
     }
 
     body.print-orientation-landscape.print-size-a4 .thiep-body.layout-full .thiep-message-text {
