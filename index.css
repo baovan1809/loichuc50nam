@@ -2614,14 +2614,17 @@ h1, h2, h3, h4, .logo-text, .message-typography {
     .thiep-body.layout-full .thiep-message-box {
         width: 100% !important;
         height: auto !important;
+        flex: none !important;
+        display: block !important;
+        text-align: center !important;
     }
 
     body.print-orientation-portrait.print-size-a4 .thiep-body.layout-full .thiep-message-box {
-        margin-top: 20mm !important; /* Position text in upper-middle of card for A4 */
+        margin-top: 25mm !important; /* Position text in upper-middle of card for A4 */
     }
 
     body.print-orientation-portrait.print-size-a5 .thiep-body.layout-full .thiep-message-box {
-        margin-top: 12mm !important; /* Calibrated upper-middle position for A5 text */
+        margin-top: 15mm !important; /* Calibrated upper-middle position for A5 text */
     }
 
     body.print-orientation-landscape.print-size-a4 .thiep-body.layout-full .thiep-message-text {
