@@ -2617,11 +2617,11 @@ h1, h2, h3, h4, .logo-text, .message-typography {
     }
 
     body.print-orientation-portrait.print-size-a4 .thiep-body.layout-full .thiep-message-box {
-        margin-top: 55mm !important; /* Position text in upper-middle of card for A4 */
+        margin-top: 20mm !important; /* Position text in upper-middle of card for A4 */
     }
 
     body.print-orientation-portrait.print-size-a5 .thiep-body.layout-full .thiep-message-box {
-        margin-top: 38mm !important; /* Calibrated upper-middle position for A5 text */
+        margin-top: 12mm !important; /* Calibrated upper-middle position for A5 text */
     }
 
     body.print-orientation-landscape.print-size-a4 .thiep-body.layout-full .thiep-message-text {
