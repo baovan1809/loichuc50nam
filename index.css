@@ -2619,12 +2619,19 @@ h1, h2, h3, h4, .logo-text, .message-typography {
         text-align: center !important;
     }
 
-    body.print-orientation-portrait.print-size-a4 .thiep-body.layout-full .thiep-message-box {
-        margin-top: 25mm !important; /* Position text in upper-middle of card for A4 */
+    /* Force text-only layout to align to the top section in portrait mode */
+    body.print-orientation-portrait .thiep-card {
+        justify-content: flex-start !important;
     }
 
-    body.print-orientation-portrait.print-size-a5 .thiep-body.layout-full .thiep-message-box {
-        margin-top: 15mm !important; /* Calibrated upper-middle position for A5 text */
+    body.print-orientation-portrait .thiep-body.layout-full {
+        margin: 0 auto !important;
+        margin-top: 45mm !important; /* Position text in upper half of card for A4/Letter */
+    }
+
+    body.print-orientation-portrait.print-size-a5 .thiep-body.layout-full {
+        margin: 0 auto !important;
+        margin-top: 30mm !important; /* Calibrated upper position for A5 text */
     }
 
     body.print-orientation-landscape.print-size-a4 .thiep-body.layout-full .thiep-message-text {
